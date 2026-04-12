@@ -14,7 +14,7 @@ const data = [
   { name: 'Jun', complaints: 239, resolved: 380 },
 ];
 
-const Landing = () => {
+const Landing= () => {
   // Static state for UI demonstration
   const [complaints] = useState([
     { id: 'C-101', status: 'Resolved', coordinates: [18.521, 73.856] },

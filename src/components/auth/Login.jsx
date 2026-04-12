@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ShieldAlert, User } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'citizen');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,18 +15,12 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    if (isSignUp) {
-      if (!name) return setError('Name is required for Sign Up.');
-      navigate(activeTab === 'citizen' ? '/user' : '/authority');
-      return;
-    }
-
     if (!email || !password) {
       setError('Please provide your email and password.');
       return;
     }
 
-    navigate(activeTab === 'citizen' ? '/user' : '/authority');
+    navigate('/dashboard', { state: { role: activeTab } });
   };
 
   const autofill = () => {
@@ -51,7 +43,7 @@ const Login = () => {
         <div className="text-center py-10 px-6 bg-slate-900 text-white relative overflow-hidden border-b border-slate-800">
           <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-indigo-600/20"></div>
           <h1 className="text-4xl font-extrabold mb-2 relative z-10 tracking-tight">ApleShahar</h1>
-          <p className="text-slate-300 relative z-10 font-medium">{isSignUp ? 'Create your account' : 'Sign in to your portal'}</p>
+          <p className="text-slate-300 relative z-10 font-medium">Sign in to your portal</p>
         </div>
 
         {/* Tabs */}
@@ -75,19 +67,6 @@ const Login = () => {
           {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium">{error}</div>}
           
           <form onSubmit={handleLogin}>
-            {isSignUp && (
-              <div className="mb-5">
-                <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>
-                <input 
-                  type="text" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition" 
-                  placeholder="Enter your full name" 
-                  required={isSignUp}
-                />
-              </div>
-            )}
             <div className="mb-5">
               <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
               <input 
@@ -111,28 +90,26 @@ const Login = () => {
               />
             </div>
             
-            {!isSignUp && (
-              <button 
-                type="button" 
-                onClick={autofill}
-                className="mb-4 text-sm font-semibold text-blue-600 hover:text-blue-800 transition"
-              >
-                Autofill Demo Credentials
-              </button>
-            )}
+            <button 
+              type="button" 
+              onClick={autofill}
+              className="mb-4 text-sm font-semibold text-blue-600 hover:text-blue-800 transition"
+            >
+              Autofill Demo Credentials
+            </button>
 
             <button 
               type="submit" 
               className={`w-full font-bold py-3 rounded-xl text-white transition shadow-lg ${activeTab === 'citizen' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-slate-800 hover:bg-slate-900 shadow-slate-900/20'}`}
             >
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              Sign In
             </button>
 
             <div className="mt-6 text-center text-sm text-slate-600 font-medium">
-              {isSignUp ? 'Already have an account?' : 'New here?'}
-              <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="ml-2 text-blue-600 hover:text-blue-800 transition">
-                {isSignUp ? 'Sign In instead' : 'Create an Account'}
-              </button>
+              New here?
+              <Link to="/signup" state={{ tab: activeTab }} className="ml-2 text-blue-600 hover:text-blue-800 transition">
+                Create an Account
+              </Link>
             </div>
           </form>
         </div>
