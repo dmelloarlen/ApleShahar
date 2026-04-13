@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import FacilityRequestDetails from '../FacilityRequestDetails';
+import { Leaf } from 'lucide-react';
 
 const ViewFacilityRequests = () => {
   const [requests, setRequests] = useState([
     { id: 'REQ-01', type: 'park', description: 'New Public Park needed in Kothrud due to lack of green spaces.', location: 'Kothrud', status: 'Accepted', date: '2023-10-20' },
-    { id: 'REQ-02', type: 'streetlight', description: 'Streetlights needed on Baner Pashan Link Road.', location: 'Baner', status: 'Pending', date: '2023-10-21' }
+    { id: 'REQ-02', type: 'streetlight', description: 'Streetlights needed on Baner Pashan Link Road to make it safer for night walks.', location: 'Baner', status: 'Pending', date: '2023-10-21' }
   ]);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [reason, setReason] = useState('');
@@ -21,46 +20,54 @@ const ViewFacilityRequests = () => {
     setSelectedRequest(null);
     setReason('');
     setActionType('');
-    alert(`Facility requested ${status} successfully!`);
+    alert(`Thank you! The facility request was ${status.toLowerCase()}.`);
   };
 
   return (
-    <div>
-        <h2 className="text-3xl font-bold mb-6">Facility Requests Review</h2>
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <table className="w-full text-left border-collapse">
+    <div className="animate-fade-in-right">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600"><Leaf className="w-6 h-6"/></div>
+        <div>
+          <h2 className="text-3xl font-black text-stone-800 tracking-tight">Grow the City</h2>
+          <p className="text-stone-500 font-medium text-sm mt-1">Review community dreams and help bring them to life.</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-stone-100 overflow-hidden">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-sm text-slate-500">
-                <th className="p-4 font-semibold">Request ID & Type</th>
-                <th className="p-4 font-semibold">Location</th>
-                <th className="p-4 font-semibold">Status</th>
-                <th className="p-4 font-semibold">Action</th>
+              <tr className="bg-[#faf9f6] border-b-2 border-stone-100 text-sm font-bold text-stone-400">
+                <th className="p-5">Community Idea</th>
+                <th className="p-5">Neighborhood</th>
+                <th className="p-5">Status</th>
+                <th className="p-5"></th>
               </tr>
             </thead>
             <tbody>
               {requests.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="p-4">
-                    <p className="font-bold text-slate-800 capitalize">{r.type}</p>
-                    <p className="text-sm text-slate-500">{r.id} • {r.date}</p>
+                <tr key={r.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/50 transition-colors">
+                  <td className="p-5">
+                    <p className="font-extrabold text-stone-800 text-base capitalize">{r.type} needed</p>
+                    <p className="text-sm font-medium text-stone-400 mt-1"><span className="text-stone-300">{r.id}</span> • Dreamt on {r.date}</p>
                   </td>
-                  <td className="p-4 text-sm text-slate-600">{r.location}</td>
-                  <td className="p-4">
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full 
-                      ${r.status === 'Accepted' ? 'bg-green-100 text-green-700' : 
-                        r.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                      {r.status}
+                  <td className="p-5 text-sm font-semibold text-stone-700">{r.location}</td>
+                  <td className="p-5">
+                    <span className={`px-4 py-1.5 text-xs font-bold rounded-full border 
+                      ${r.status === 'Accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                        r.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                      {r.status === 'Pending' ? 'Thinking about it' : r.status}
                     </span>
                   </td>
-                  <td className="p-4">
+                  <td className="p-5 text-right">
                     <button 
                       onClick={() => {
                         setSelectedRequest(r);
                         setReason(r.reason || '');
                       }}
-                      className="text-indigo-600 hover:text-indigo-800 font-medium text-sm transition"
+                      className="bg-stone-100 text-stone-600 hover:bg-emerald-50 hover:text-emerald-600 font-bold text-sm px-4 py-2 rounded-xl transition-all"
                     >
-                      Review
+                      Read More
                     </button>
                   </td>
                 </tr>
@@ -68,18 +75,19 @@ const ViewFacilityRequests = () => {
             </tbody>
           </table>
           {requests.length === 0 && (
-            <div className="p-8 text-center text-slate-500">No facility requests found.</div>
+            <div className="p-12 text-center text-stone-500 font-bold">No community ideas found yet.</div>
           )}
         </div>
+      </div>
 
-        <FacilityRequestDetails 
-          selectedRequest={selectedRequest}
-          setSelectedRequest={setSelectedRequest}
-          reason={reason}
-          setReason={setReason}
-          setActionType={setActionType}
-          handleAction={handleAction}
-        />
+      <FacilityRequestDetails 
+        selectedRequest={selectedRequest}
+        setSelectedRequest={setSelectedRequest}
+        reason={reason}
+        setReason={setReason}
+        setActionType={setActionType}
+        handleAction={handleAction}
+      />
     </div>
   );
 };

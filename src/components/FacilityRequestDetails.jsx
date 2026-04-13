@@ -12,44 +12,42 @@ const FacilityRequestDetails = ({
   if (!selectedRequest) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="text-xl font-bold">Review Request {selectedRequest.id}</h3>
-          <button onClick={() => setSelectedRequest(null)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+    <div className="fixed inset-0 bg-stone-900/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden transform animate-fade-in-right">
+        <div className="p-8 pb-4 flex justify-between items-center relative z-10">
+          <div className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-lg text-xs font-bold mb-2 inline-block">Review Request</div>
+          <button onClick={() => setSelectedRequest(null)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-400 hover:bg-stone-200 hover:text-stone-600 transition-colors shrink-0 -mt-8 -mr-2">&times;</button>
         </div>
-        <form onSubmit={handleAction} className="p-6">
-          <div className="mb-4">
-            <p className="font-bold text-slate-800 mb-1 capitalize">{selectedRequest.type} at {selectedRequest.location}</p>
-            <p className="text-sm text-slate-500 mb-4">{selectedRequest.description}</p>
-          </div>
+        <form onSubmit={handleAction} className="p-8 pt-0">
+          <h3 className="text-2xl font-black text-stone-800 mb-2 capitalize">{selectedRequest.type} at {selectedRequest.location}</h3>
+          <p className="text-sm font-medium text-stone-500 mb-6 leading-relaxed bg-stone-50 p-4 rounded-2xl">{selectedRequest.description}</p>
 
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Reason for Decision</label>
+          <div className="mb-8">
+            <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">Provide a reason for your decision</label>
             <textarea 
               rows="3"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" 
-              placeholder="Provide a reason..." 
+              className="w-full px-5 py-4 border-2 border-stone-100 bg-stone-50 rounded-2xl focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300 focus:outline-none transition-all placeholder:text-stone-300 font-medium" 
+              placeholder="e.g. Budget approved for this quarter..." 
               required
             ></textarea>
           </div>
 
-          <div className="flex gap-3 justify-end border-t border-slate-100 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4">
             <button 
               type="submit" 
               onClick={() => setActionType('Reject')}
-              className="px-5 py-2 font-medium bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition border border-red-200 flex items-center gap-2"
+              className="w-full sm:w-auto px-6 py-3 font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-2xl transition-all flex items-center justify-center gap-2"
             >
-              <XSquare className="w-4 h-4" /> Reject
+              <XSquare className="w-5 h-5" /> Not now
             </button>
             <button 
               type="submit" 
               onClick={() => setActionType('Accept')}
-              className="px-5 py-2 font-medium bg-green-600 text-white hover:bg-green-700 rounded-lg transition flex items-center gap-2"
+              className="w-full sm:w-auto px-6 py-3 font-black bg-emerald-500 text-white hover:bg-emerald-600 rounded-2xl transition-all shadow-lg shadow-emerald-200 hover:-translate-y-1 flex items-center justify-center gap-2"
             >
-              <CheckSquare className="w-4 h-4" /> Accept
+              <CheckSquare className="w-5 h-5" /> Let's build it!
             </button>
           </div>
         </form>

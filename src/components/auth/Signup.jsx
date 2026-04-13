@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { ShieldAlert, User } from 'lucide-react';
+import { Building2, User, ShieldAlert, ArrowRight } from 'lucide-react';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -16,95 +16,119 @@ const Signup = () => {
     setError('');
 
     if (!name) {
-      return setError('Name is required for Sign Up.');
+      return setError('Please tell us your name.');
     }
     if (!email || !password) {
-      return setError('Please provide your email and password.');
+      return setError('Please provide an email and password to secure your account.');
     }
 
-    // No backend database logic. Static UI route transition.
-    navigate('/dashboard', { state: { role: activeTab } });
+    localStorage.setItem('user', JSON.stringify({ name, role: activeTab, email }));
+
+    const path = activeTab === 'citizen' ? 'report-issue' : 'manage-complaints';
+    navigate(`/dashboard/${path}`, { state: { role: activeTab } });
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-blue-600/20 blur-[100px] pointer-events-none animate-pulse"></div>
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] rounded-full bg-indigo-600/20 blur-[100px] pointer-events-none"></div>
+    <div className="min-h-screen bg-stone-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <Link to="/" className="flex justify-center items-center gap-2 mb-6 hover:opacity-80 transition-opacity">
+          <div className="bg-stone-900 p-2 rounded-lg">
+            <Building2 className="text-white w-5 h-5" />
+          </div>
+          <span className="text-2xl font-bold tracking-tight text-stone-900">ApleShahar</span>
+        </Link>
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-stone-900">Create an account</h2>
+        <p className="mt-2 text-center text-sm text-stone-600">
+          Already have an account?{' '}
+          <Link to="/login" state={{ tab: activeTab }} className="font-semibold text-blue-600 hover:text-blue-500 transition-colors">
+            Sign in here
+          </Link>
+        </p>
+      </div>
 
-      <div className="max-w-md w-full bg-white rounded-[2rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] border border-slate-100 overflow-hidden relative z-10 animate-fade-in-right">
-        <div className="text-center py-10 px-6 bg-slate-900 text-white relative overflow-hidden border-b border-slate-800">
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-indigo-600/20"></div>
-          <h1 className="text-4xl font-extrabold mb-2 relative z-10 tracking-tight">ApleShahar</h1>
-          <p className="text-slate-300 relative z-10 font-medium">Create your account</p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b border-slate-200">
-          <button
-            onClick={() => { setActiveTab('citizen'); setError(''); }}
-            className={`flex-1 py-4 font-bold flex justify-center items-center gap-2 transition ${activeTab === 'citizen' ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}
-          >
-            <User className="w-5 h-5" /> Citizen
-          </button>
-          <button
-            onClick={() => { setActiveTab('authority'); setError(''); }}
-            className={`flex-1 py-4 font-bold flex justify-center items-center gap-2 transition ${activeTab === 'authority' ? 'bg-indigo-50 text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:bg-slate-50'}`}
-          >
-            <ShieldAlert className="w-5 h-5" /> Authority
-          </button>
-        </div>
-
-        <div className="p-8">
-          {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium">{error}</div>}
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow-sm sm:rounded-xl sm:px-10 border border-stone-200">
           
-          <form onSubmit={handleSignup}>
-            <div className="mb-5">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>
-              <input 
-                type="text" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition" 
-                placeholder="Enter your full name" 
-                required
-              />
-            </div>
-            
-            <div className="mb-5">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
-              <input 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition" 
-                placeholder="Enter your email" 
-                required 
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Password</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition" 
-                placeholder="Enter your password" 
-                required 
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              className={`w-full font-bold py-3 rounded-xl text-white transition shadow-lg ${activeTab === 'citizen' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-slate-800 hover:bg-slate-900 shadow-slate-900/20'}`}
+          {/* Role Tabs */}
+          <div className="flex p-1 bg-stone-100 rounded-lg mb-8">
+            <button
+              onClick={() => { setActiveTab('citizen'); setError(''); }}
+              className={`flex-1 flex justify-center items-center gap-2 py-2 text-sm font-semibold rounded-md transition-all ${
+                activeTab === 'citizen' 
+                  ? 'bg-white text-stone-900 shadow-sm border border-stone-200/50' 
+                  : 'text-stone-500 hover:text-stone-700'
+              }`}
             >
-              Create Account
+              <User className="w-4 h-4" /> Citizen
             </button>
+            <button
+              onClick={() => { setActiveTab('authority'); setError(''); }}
+              className={`flex-1 flex justify-center items-center gap-2 py-2 text-sm font-semibold rounded-md transition-all ${
+                activeTab === 'authority' 
+                  ? 'bg-white text-stone-900 shadow-sm border border-stone-200/50' 
+                  : 'text-stone-500 hover:text-stone-700'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" /> Authority
+            </button>
+          </div>
 
-            <div className="mt-6 text-center text-sm text-slate-600 font-medium">
-              Already have an account?
-              <Link to="/login" state={{ tab: activeTab }} className="ml-2 text-blue-600 hover:text-blue-800 transition">
-                Sign In instead
-              </Link>
+          <form className="space-y-6" onSubmit={handleSignup}>
+            {error && (
+              <div className="bg-red-50 border border-red-100 p-4 rounded-lg">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-semibold leading-6 text-stone-900">Full name</label>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="block w-full rounded-lg border-0 py-2.5 px-4 text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 placeholder:text-stone-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
+                  placeholder="e.g. Alex Doe"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold leading-6 text-stone-900">Email address</label>
+              <div className="mt-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="block w-full rounded-lg border-0 py-2.5 px-4 text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 placeholder:text-stone-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
+                  placeholder="hello@example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold leading-6 text-stone-900">Password</label>
+              <div className="mt-2">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full rounded-lg border-0 py-2.5 px-4 text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 placeholder:text-stone-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                className="flex w-full justify-center items-center gap-2 rounded-lg bg-stone-900 px-3 py-3 text-sm font-semibold text-white shadow-sm hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 transition-all"
+              >
+                Create account <ArrowRight className="w-4 h-4"/>
+              </button>
             </div>
           </form>
         </div>

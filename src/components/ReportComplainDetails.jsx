@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Leaf, MapPin } from 'lucide-react';
 
 // Fix for default leaflet marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -78,11 +77,11 @@ const ReportComplainDetails = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!position || !selectedWard) {
-      alert('Please select a ward and pin a location on the map first.');
+      alert('We need to know where this is! Please select a ward and pin it on the map.');
       return;
     }
 
-    alert('Complaint successfully registered!');
+    alert('Thank you! Your issue has been shared with the community helpers.');
     setPosition(null);
     setSelectedWard('');
     setPhoto(null);
@@ -90,65 +89,69 @@ const ReportComplainDetails = () => {
   };
 
   return (
-    <div>
-        <h2 className="text-3xl font-bold mb-6">Report an Infrastructure Issue</h2>
+    <div className="animate-fade-in-right">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600"><Leaf className="w-5 h-5"/></div>
+        <h2 className="text-3xl font-black text-stone-800">Notice something broken?</h2>
+      </div>
+      <p className="text-stone-500 mb-8 font-medium">Let us know what's wrong, and we'll get it fixed together.</p>
+      
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-stone-100 max-w-4xl">
+        <div className="mb-6">
+          <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">What happened?</label>
+          <input type="text" className="w-full px-5 py-4 border-2 border-stone-100 bg-stone-50 rounded-2xl focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300 focus:outline-none transition-all placeholder:text-stone-300 font-medium" placeholder="Briefly describe the issue (e.g. Tree branch blocking road)" required />
+        </div>
         
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Issue Title</label>
-            <input type="text" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. Broken Streetlight" required />
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
-            <textarea rows="4" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Describe the issue in detail..." required></textarea>
-          </div>
+        <div className="mb-6">
+          <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">Share more details with us</label>
+          <textarea rows="4" className="w-full px-5 py-4 border-2 border-stone-100 bg-stone-50 rounded-2xl focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300 focus:outline-none transition-all placeholder:text-stone-300 font-medium" placeholder="The more details, the better we can help..." required></textarea>
+        </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Upload Geotagged Photo</label>
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment"
-              onChange={handlePhotoChange}
-              className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition" 
-              required 
-            />
-            {photo && <p className="text-xs text-green-600 mt-1 font-medium">✓ Photo successfully attached</p>}
-          </div>
+        <div className="mb-6">
+          <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">Upload a photo to help us find it</label>
+          <input 
+            type="file" 
+            accept="image/*" 
+            capture="environment"
+            onChange={handlePhotoChange}
+            className="block w-full text-sm text-stone-500 file:mr-4 file:py-3 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 transition-all cursor-pointer" 
+            required 
+          />
+          {photo && <p className="text-sm text-emerald-600 mt-3 font-bold flex items-center gap-1 pl-2">✓ Photo attached beautifully!</p>}
+        </div>
 
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-semibold text-slate-700">Pin Location on Map</label>
-              <select 
-                value={selectedWard} 
-                onChange={handleWardChange}
-                className="px-3 py-1 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Filter by Ward...</option>
-                {wards.map(w => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="rounded-xl overflow-hidden border border-slate-300 mb-2 relative z-0" style={{ height: '400px' }}>
-              <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <MapUpdater center={mapCenter} />
-                <LocationMarker position={position} setPosition={setPosition} />
-              </MapContainer>
-            </div>
-            {position ? (
-              <p className="text-sm text-green-600 font-medium tracking-tight">Location selected: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}</p>
-            ) : (
-              <p className="text-sm text-slate-500">Click on the map to pin the exact location.</p>
-            )}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 px-2 gap-2">
+            <label className="block text-sm font-bold text-stone-600 flex items-center gap-2"><MapPin className="text-rose-500 w-4 h-4"/> Pin it on the map</label>
+            <select 
+              value={selectedWard} 
+              onChange={handleWardChange}
+              className="w-full sm:w-auto px-4 py-2 bg-stone-50 border-2 border-stone-100 rounded-xl text-sm font-bold text-stone-600 focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300 transition-all cursor-pointer"
+            >
+              <option value="">Jump to Neighborhood...</option>
+              {wards.map(w => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </select>
           </div>
+          <div className="rounded-[2rem] overflow-hidden border-4 border-stone-50 shadow-inner mb-3 relative z-0" style={{ height: '400px' }}>
+            <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+              <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+              <MapUpdater center={mapCenter} />
+              <LocationMarker position={position} setPosition={setPosition} />
+            </MapContainer>
+          </div>
+          {position ? (
+            <p className="text-sm text-emerald-600 font-bold tracking-tight pl-2">Location pinned: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}</p>
+          ) : (
+            <p className="text-sm text-stone-400 font-medium pl-2">Tap on the map to drop a pin.</p>
+          )}
+        </div>
 
-          <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">
-            Submit Complaint
-          </button>
-        </form>
+        <button type="submit" className="w-full bg-emerald-500 text-white font-black text-lg py-5 rounded-2xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 hover:-translate-y-1">
+          Share with Community
+        </button>
+      </form>
     </div>
   );
 };

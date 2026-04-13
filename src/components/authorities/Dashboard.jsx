@@ -1,132 +1,130 @@
-import React, { useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { ShieldCheck, List, LogOut, Home, PlusCircle, FileText } from 'lucide-react';
-
-import ViewComplains from '../ViewComplains';
-import ViewFacilityRequests from './ViewFacilityRequests';
-
-import ReportComplainDetails from '../ReportComplainDetails';
+import React, { useEffect } from 'react';
+import { useLocation, Link, useNavigate, Outlet } from 'react-router-dom';
+import { ShieldCheck, LogOut, Home, PlusCircle, Leaf, HeartHandshake, Building2 } from 'lucide-react';
 
 const Dashboard = () => {
   const location = useLocation();
-  const role = location.state?.role || 'citizen';
-  
-  // Default tabs based on role
-  const [activeTab, setActiveTab] = useState(role === 'citizen' ? 'report-issue' : 'manage-complaints');
+  const navigate = useNavigate();
+  // Role can come from state or be default 
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const role = location.state?.role || (user ? user.role : 'citizen');
+  // Figure out the active tab from URL path
+  const pathParts = location.pathname.split('/');
+  const activeTab = pathParts[pathParts.length - 1];
+
+  // If we just hit /dashboard without a child route, redirect based on role
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      if (role === 'citizen') {
+        navigate('/dashboard/report-issue', { replace: true, state: { role } });
+      } else {
+        navigate('/dashboard/manage-complaints', { replace: true, state: { role } });
+      }
+    }
+  }, [activeTab, navigate, role]);
 
   const handleLogout = () => {
-    // Just static UI. Route to home.
+    localStorage.removeItem('user');
+  };
+  
+  const handleTabChange = (tabId) => {
+    navigate(`/dashboard/${tabId}`, { state: { role } });
   };
 
-  // -------------------------
-  // AUTHORITY SIDEBAR
-  // -------------------------
-  const renderAuthoritySidebar = () => (
-    <aside className="w-64 bg-slate-900 text-slate-300 border-r border-slate-800 flex flex-col hidden md:flex min-h-screen">
-      <div className="p-6 border-b border-slate-800 flex items-center gap-3 bg-slate-950">
-        <ShieldCheck className="text-indigo-500 w-8 h-8" />
-        <h1 className="text-xl font-bold text-white">Gov Portal</h1>
-      </div>
-      <nav className="flex-1 p-4 space-y-2">
-        <Link to="/" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-          <Home className="w-5 h-5" /> Home
-        </Link>
-        <button 
-          onClick={() => setActiveTab('manage-complaints')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition ${activeTab === 'manage-complaints' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'hover:bg-slate-800 hover:text-white'}`}
-        >
-          <List className="w-5 h-5" /> Manage Complaints
-        </button>
-        <button 
-          onClick={() => setActiveTab('facility-requests')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition ${activeTab === 'facility-requests' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'hover:bg-slate-800 hover:text-white'}`}
-        >
-          <FileText className="w-5 h-5" /> Facility Requests
-        </button>
-      </nav>
-      <div className="p-4 border-t border-slate-800 bg-slate-950">
-        <Link to="/" onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium hover:bg-red-900/30 text-red-500 hover:text-red-400 transition">
-          <LogOut className="w-5 h-5" /> Log Out
-        </Link>
-      </div>
-    </aside>
-  );
-
-  // -------------------------
-  // CITIZEN SIDEBAR
-  // -------------------------
-  const renderCitizenSidebar = () => (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex min-h-screen">
-      <div className="p-6 border-b border-slate-200 bg-slate-50">
-        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white"><Home className="w-4 h-4"/></div>
-          Citizen Portal
-        </h1>
-      </div>
-      <nav className="flex-1 p-4 space-y-2 bg-white">
-        <Link to="/" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-600 hover:bg-slate-50 transition">
-          <Home className="w-5 h-5 text-slate-400" /> Home
-        </Link>
-        <button 
-          onClick={() => setActiveTab('report-issue')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition ${activeTab === 'report-issue' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-        >
-          <PlusCircle className={`w-5 h-5 ${activeTab === 'report-issue' ? 'text-blue-600' : 'text-slate-400'}`} /> Report Issue
-        </button>
-      </nav>
-      <div className="p-4 border-t border-slate-200 bg-slate-50">
-        <Link to="/" onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-600 hover:bg-red-50 hover:text-red-700 transition">
-          <LogOut className="w-5 h-5" /> Log Out
-        </Link>
-      </div>
-    </aside>
-  );
+  const navItemClass = (tabId) => 
+    `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors border border-transparent ${
+      activeTab === tabId ? 'bg-stone-900 text-white shadow-sm' : 'text-stone-600 hover:bg-stone-100 hover:border-stone-200'
+    }`;
 
   return (
-    <div className={`min-h-screen flex ${role === 'authority' ? 'bg-slate-100' : 'bg-slate-50'}`}>
-      
-      {role === 'authority' ? renderAuthoritySidebar() : renderCitizenSidebar()}
+    <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
+      {/* Top Navbar */}
+      <nav className="border-b border-stone-200 sticky top-0 bg-white/80 backdrop-blur-md z-50">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <div className="bg-stone-900 p-2 rounded-lg">
+                <Building2 className="text-white w-4 h-4" />
+              </div>
+              <span className="text-lg font-bold tracking-tight text-stone-900 hidden sm:block">ApleShahar</span>
+            </Link>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 h-screen overflow-y-auto w-full">
-        
-        {/* Mobile Header Authority */}
-        {role === 'authority' && (
-          <div className="md:hidden flex justify-between items-center mb-6 bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-700">
-            <span className="font-bold text-lg flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-indigo-400"/> Gov Portal</span>
-            <select 
-              value={activeTab} 
-              onChange={(e) => setActiveTab(e.target.value)}
-              className="border-none bg-slate-800 text-white font-medium py-2 px-3 rounded-lg outline-none max-w-[150px]"
-            >
-              <option value="manage-complaints">Manage Complaints</option>
-              <option value="facility-requests">Facility Requests</option>
-            </select>
+            {/* Desktop Navigation Links */}
+            <div className="hidden md:flex items-center gap-2 border-l border-stone-200 pl-8">
+              {role === 'citizen' ? (
+                <>
+                  <button onClick={() => handleTabChange('report-issue')} className={navItemClass('report-issue')}>
+                    <PlusCircle className="w-4 h-4" /> Report Issue
+                  </button>
+                  <button onClick={() => handleTabChange('manage-complaints')} className={navItemClass('manage-complaints')}>
+                    <HeartHandshake className="w-4 h-4" /> My Complaints
+                  </button>
+                  <button onClick={() => handleTabChange('facility-requests')} className={navItemClass('facility-requests')}>
+                    <Leaf className="w-4 h-4" /> Facility Requests
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => handleTabChange('manage-complaints')} className={navItemClass('manage-complaints')}>
+                    <HeartHandshake className="w-4 h-4" /> Help Neighbors
+                  </button>
+                  <button onClick={() => handleTabChange('facility-requests')} className={navItemClass('facility-requests')}>
+                    <Leaf className="w-4 h-4" /> Grow the City
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        )}
-
-        {/* Mobile Header Citizen */}
-        {role === 'citizen' && (
-          <div className="md:hidden flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-            <span className="font-bold text-lg">Citizen Portal</span>
-            <select 
-              value={activeTab} 
-              onChange={(e) => setActiveTab(e.target.value)}
-              className="border-none bg-slate-50 font-medium py-2 px-3 rounded-lg outline-none text-slate-700"
+          
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex flex-col text-right mr-2">
+              <span className="text-xs font-bold text-stone-900">{user ? user.name : 'User'}</span>
+              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                {role === 'authority' ? 'Authority Portal' : 'Citizen Portal'}
+              </span>
+            </div>
+            <Link 
+              to="/" 
+              onClick={handleLogout} 
+              className="px-4 py-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900 border border-stone-200 hover:border-stone-300 rounded-lg transition-all flex items-center gap-2"
+              title="Log out"
             >
-              <option value="report-issue">Report Issue</option>
-            </select>
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-semibold hidden sm:block">Logout</span>
+            </Link>
           </div>
-        )}
-
-        {/* RENDER CONTENT BASED ON TAB */}
-        <div className="max-w-6xl mx-auto">
-          {activeTab === 'manage-complaints' && <ViewComplains />}
-          {activeTab === 'facility-requests' && <ViewFacilityRequests />}
-
-          {activeTab === 'report-issue' && <ReportComplainDetails />}
         </div>
+      </nav>
 
+      {/* Mobile Navigation Dropdown */}
+      <div className="md:hidden bg-white border-b border-stone-200 px-4 py-3 flex gap-2 overflow-x-auto shadow-sm">
+        {role === 'citizen' ? (
+          <>
+            <button onClick={() => handleTabChange('report-issue')} className={'whitespace-nowrap shrink-0 ' + navItemClass('report-issue')}>
+              <PlusCircle className="w-4 h-4" /> Report Issue
+            </button>
+            <button onClick={() => handleTabChange('manage-complaints')} className={'whitespace-nowrap shrink-0 ' + navItemClass('manage-complaints')}>
+              <HeartHandshake className="w-4 h-4" /> My Complaints
+            </button>
+            <button onClick={() => handleTabChange('facility-requests')} className={'whitespace-nowrap shrink-0 ' + navItemClass('facility-requests')}>
+              <Leaf className="w-4 h-4" /> Facility Requests
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={() => handleTabChange('manage-complaints')} className={'whitespace-nowrap shrink-0 ' + navItemClass('manage-complaints')}>
+              <HeartHandshake className="w-4 h-4" /> Help Neighbors
+            </button>
+            <button onClick={() => handleTabChange('facility-requests')} className={'whitespace-nowrap shrink-0 ' + navItemClass('facility-requests')}>
+              <Leaf className="w-4 h-4" /> Grow the City
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 overflow-y-auto">
+        <Outlet />
       </main>
     </div>
   );
