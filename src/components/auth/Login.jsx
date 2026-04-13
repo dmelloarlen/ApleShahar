@@ -37,22 +37,6 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
-      {/* Navbar */}
-      <nav className="border-b border-stone-200 sticky top-0 bg-white/80 backdrop-blur-md z-50">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="bg-stone-900 p-2 rounded-lg">
-              <Building2 className="text-white w-4 h-4" />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-stone-900">ApleShahar</span>
-          </Link>
-          <Link to="/" className="text-stone-500 hover:text-stone-900 text-sm font-semibold flex items-center gap-2 transition-colors">
-            <Home className="w-4 h-4" />
-            <span className="hidden sm:block">Back to home</span>
-          </Link>
-        </div>
-      </nav>
-
       {/* Main Content */}
       <div className="flex-1 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
