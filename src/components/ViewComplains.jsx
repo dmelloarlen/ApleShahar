@@ -1,167 +1,178 @@
-import React, { useState } from 'react';
-import { Search, HeartHandshake } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Search, HeartHandshake } from "lucide-react";
+
+const STORAGE_KEY = "complaintsData";
+
+const initialComplaints = [
+  {
+    id: "C-101",
+    title: "Pothole on Main St",
+    description:
+      "Large pothole causing traffic slowdowns and potential vehicle damage.",
+    status: "Fixed",
+    contractor: "City Works Team",
+    date: "2023-10-12",
+    location: "Main St & 4th Ave",
+    ward: "W-01",
+    photo: null,
+  },
+  {
+    id: "C-102",
+    title: "Broken Streetlight",
+    description: "Streetlight has been flickering and is now completely off.",
+    status: "Fixed",
+    contractor: null,
+    date: "2023-10-15",
+    location: "Oakwood Dr",
+    ward: "W-02",
+    photo: null,
+  },
+  {
+    id: "C-103",
+    title: "Flooded Pedestrian Walkway",
+    description: "Drainage seems blocked, causing severe flooding after rain.",
+    status: "Helping",
+    contractor: "Neighborhood Squad",
+    date: "2023-10-18",
+    location: "River Road",
+    ward: "W-03",
+    photo:
+      "https://images.unsplash.com/photo-1549237510-e01c8a53ff79?auto=format&fit=crop&w=900&q=80",
+  },
+];
+
+const statusStyles = {
+  Fixed: "bg-emerald-50 text-emerald-600 border-emerald-100",
+  Helping: "bg-amber-50 text-amber-600 border-amber-100",
+  Satisfied: "bg-sky-50 text-sky-600 border-sky-100",
+  Revoked: "bg-rose-50 text-rose-600 border-rose-100",
+  Reopened: "bg-violet-50 text-violet-600 border-violet-100",
+  "Just Reported": "bg-slate-50 text-slate-600 border-slate-100",
+};
 
 const ViewComplains = () => {
-  const [complaints, setComplaints] = useState([
-    { id: 'C-101', title: 'Pothole on Main St', description: 'Large pothole causing traffic slowdowns and potential vehicle damage.', status: 'Fixed', contractor: 'City Works Team', date: '2023-10-12', location: 'Main St & 4th Ave', verified: true, ward: 'W-01' },
-    { id: 'C-102', title: 'Broken Streetlight', description: 'Streetlight has been flickering and is now completely off.', status: 'Fixed', contractor: null, date: '2023-10-15', location: 'Oakwood Dr', verified: true, ward: 'W-02' },
-    { id: 'C-103', title: 'Flooded Pedestrian Walkway', description: 'Drainage seems blocked, causing severe flooding after rain.', status: 'Helping', contractor: 'Neighborhood Squad', date: '2023-10-18', location: 'River Road', verified: false, ward: 'W-03' }
-  ]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedComplaint, setSelectedComplaint] = useState(null);
-  const [contractorName, setContractorName] = useState('');
-  const [newStatus, setNewStatus] = useState('');
+  const [complaints, setComplaints] = useState(() => {
+    const item = localStorage.getItem(STORAGE_KEY);
+    if (!item) return initialComplaints;
+    try {
+      return JSON.parse(item);
+    } catch {
+      return initialComplaints;
+    }
+  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
-  const filteredComplaints = complaints.filter(c =>
-    c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const user = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isCitizen = user?.role === "citizen";
+
+  const filteredComplaints = complaints.filter(
+    (complaint) =>
+      complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.location.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const handleUpdate = (e) => {
-    e.preventDefault();
-    if (!selectedComplaint) return;
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(complaints));
+  }, [complaints]);
 
-    const payload = { status: newStatus || selectedComplaint.status, contractor: contractorName || selectedComplaint.contractor };
-    setComplaints(complaints.map(c => c.id === selectedComplaint.id ? { ...c, ...payload } : c));
-    setSelectedComplaint(null);
-    setContractorName('');
-    setNewStatus('');
-    alert('Thank you for helping out! Status updated.');
+  const openComplaint = (complaint) => {
+    navigate(`/manage-complaint?id=${complaint.id}`, { state: { complaint } });
   };
 
   return (
-    <div className="animate-fade-in-right">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-amber-100 rounded-xl text-amber-600"><HeartHandshake className="w-6 h-6" /></div>
-          <div>
-            <h2 className="text-3xl font-black text-stone-800 tracking-tight">Help Neighbors</h2>
-            <p className="text-stone-500 font-medium text-sm mt-1">Review neighborhood issues and organize help.</p>
-          </div>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex lg:justify-end mb-8">
+            <div className="relative w-full max-w-sm">
+              <input
+                aria-label="Search complaints"
+                type="text"
+                placeholder="Search by issue, ID, or location"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-3xl border border-slate- bg-white py-3 pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+              />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            </div>
         </div>
 
-        <div className="relative w-full sm:w-72">
-          <input
-            type="text"
-            placeholder="Search by ID or Title..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-5 py-3 bg-white border-2 border-stone-100 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:border-amber-300 focus:outline-none transition-all placeholder:text-stone-300 font-medium text-stone-700 shadow-sm"
-          />
-          <Search className="w-5 h-5 text-stone-400 absolute left-4 top-3.5" />
-        </div>
-      </div>
-
-      <div className="bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-stone-100 overflow-hidden">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="bg-[#faf9f6] border-b-2 border-stone-100 text-sm font-bold text-stone-400">
-                <th className="p-5">Issue Details</th>
-                <th className="p-5">Reported On</th>
-                <th className="p-5">Who's Helping?</th>
-                <th className="p-5">Current Status</th>
-                <th className="p-5"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredComplaints.map((c) => (
-                <tr key={c.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/50 transition-colors">
-                  <td className="p-5">
-                    <p className="font-extrabold text-stone-800 text-base">{c.title}</p>
-                    <p className="text-sm font-medium text-stone-400 mt-1"><span className="text-stone-300">{c.id}</span> • {c.location}</p>
-                  </td>
-                  <td className="p-5 text-sm font-semibold text-stone-500">{c.date}</td>
-                  <td className="p-5 text-sm font-semibold text-stone-500">
-                    {c.contractor ? c.contractor : <span className="text-stone-300 italic">No one yet</span>}
-                  </td>
-                  <td className="p-5">
-                    <span className={`px-4 py-1.5 text-xs font-bold rounded-full border 
-                      ${c.status === 'Fixed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        c.status === 'Helping' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                      {c.status}
-                    </span>
-                  </td>
-                  <td className="p-5 text-right">
-                    <button
-                      onClick={() => {
-                        setSelectedComplaint(c);
-                        setContractorName(c.contractor || '');
-                        setNewStatus(c.status);
-                      }}
-                      className="bg-stone-100 text-stone-600 hover:bg-amber-50 hover:text-amber-600 font-bold text-sm px-4 py-2 rounded-xl transition-all"
-                    >
-                      Assist
-                    </button>
-                  </td>
+        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse text-left">
+              <thead className="bg-slate-50 text-sm text-slate-500">
+                <tr>
+                  <th className="px-5 py-4 font-semibold">Issue</th>
+                  <th className="px-5 py-4 font-semibold">Reported</th>
+                  <th className="px-5 py-4 font-semibold">Ward</th>
+                  <th className="px-5 py-4 font-semibold">Status</th>
+                  <th className="px-5 py-4 font-semibold text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredComplaints.map((complaint) => (
+                  <tr
+                    key={complaint.id}
+                    className="border-t border-slate-100 hover:bg-slate-50/60 transition-colors"
+                  >
+                    <td className="px-5 py-4">
+                      <p className="font-semibold text-slate-900">
+                        {complaint.title}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {complaint.location} •{" "}
+                        {complaint.description.slice(0, 70)}...
+                      </p>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-500">
+                      {complaint.date}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-500">
+                      {complaint.ward}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusStyles[complaint.status] || "bg-slate-50 text-slate-600 border-slate-200"}`}
+                      >
+                        {complaint.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => openComplaint(complaint)}
+                        className="rounded-2xl bg-amber-500 px-4 py-2 text-sm font-semibold text-stone-900 shadow-sm shadow-amber-200 transition hover:bg-amber-600"
+                      >
+                        {isCitizen ? "Manage" : "Assist"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
           {filteredComplaints.length === 0 && (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-6 h-6 text-stone-300" />
-              </div>
-              <p className="text-stone-500 font-bold">No issues found.</p>
-              <p className="text-stone-400 text-sm mt-1">Try searching for something else.</p>
+            <div className="p-12 text-center text-slate-500">
+              <p className="text-lg font-semibold">
+                No reports match your search.
+              </p>
+              <p className="mt-2 text-sm">
+                Try a different keyword or clear the search filter.
+              </p>
             </div>
           )}
         </div>
       </div>
-
-      {/* Soft Modal */}
-      {selectedComplaint && (
-        <div className="fixed inset-0 bg-stone-900/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden transform animate-fade-in-right">
-            <div className="p-8 pb-4 flex justify-between items-center relative z-10">
-              <div className="bg-amber-100 text-amber-600 px-3 py-1 rounded-lg text-xs font-bold mb-2 inline-block">Update Required</div>
-              <button onClick={() => setSelectedComplaint(null)} className="w-8 h-8 flex items-center justify-center bg-stone-100 rounded-full text-stone-400 hover:bg-stone-200 hover:text-stone-600 transition-colors shrink-0 -mt-8 -mr-2">&times;</button>
-            </div>
-            <form onSubmit={handleUpdate} className="p-8 pt-0">
-              <h3 className="text-2xl font-black text-stone-800 mb-2">{selectedComplaint.title}</h3>
-              <p className="text-sm font-medium text-stone-500 mb-6 leading-relaxed bg-stone-50 p-4 rounded-2xl">{selectedComplaint.description}</p>
-
-              {selectedComplaint.photo && (
-                <img src={selectedComplaint.photo} alt="Issue evidence" className="mb-6 rounded-2xl max-h-48 object-cover w-full shadow-sm border border-stone-100" />
-              )}
-
-              <div className="mb-5">
-                <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">Who's going to fix this?</label>
-                <input
-                  type="text"
-                  value={contractorName}
-                  onChange={(e) => setContractorName(e.target.value)}
-                  className="w-full px-5 py-4 border-2 border-stone-100 bg-stone-50 rounded-2xl focus:bg-white focus:ring-4 focus:ring-amber-100 focus:border-amber-300 focus:outline-none transition-all placeholder:text-stone-300 font-medium"
-                  placeholder="e.g. Local Handy Team"
-                />
-              </div>
-
-              <div className="mb-8">
-                <label className="block text-sm font-bold text-stone-600 mb-2 pl-2">Current Status</label>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full px-5 py-4 border-2 border-stone-100 bg-stone-50 rounded-2xl focus:bg-white focus:ring-4 focus:ring-amber-100 focus:border-amber-300 focus:outline-none transition-all font-medium text-stone-700 cursor-pointer"
-                >
-                  <option value="Just Reported">Just Reported</option>
-                  <option value="Helping">Helping out</option>
-                  <option value="Fixed">All Fixed!</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 justify-end mt-4">
-                <button type="button" onClick={() => setSelectedComplaint(null)} className="w-full sm:w-auto px-6 py-3 font-bold text-stone-500 hover:bg-stone-100 rounded-2xl transition-all">
-                  Not now
-                </button>
-                <button type="submit" className="w-full sm:w-auto px-8 py-3 font-black bg-amber-500 text-stone-900 hover:bg-amber-600 rounded-2xl transition-all shadow-lg shadow-amber-200 hover:-translate-y-1">
-                  Save Good Work
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

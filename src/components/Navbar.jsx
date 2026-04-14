@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Building2, PlusCircle, HeartHandshake, Leaf, ArrowRight, LogOut, Home } from 'lucide-react';
+import { Building2, PlusCircle, HeartHandshake, Leaf, ArrowRight, LogOut, Home, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Update user state whenever the route changes
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     setUser(storedUser ? JSON.parse(storedUser) : null);
@@ -16,10 +16,13 @@ const Navbar = () => {
   const pathParts = location.pathname.split('/');
   const activeTab = pathParts[pathParts.length - 1];
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  const isHomePage = location.pathname === '/';
 
   const navItemClass = (tabId) => 
-    `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors border border-transparent whitespace-nowrap shrink-0 ${
-      activeTab === tabId ? 'bg-stone-900 text-white shadow-sm' : 'text-stone-600 hover:bg-stone-100 hover:border-stone-200'
+    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${
+      activeTab === tabId 
+        ? 'text-indigo-600 bg-indigo-50' 
+        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
     }`;
 
   const renderDashboardLinks = () => {
@@ -27,13 +30,13 @@ const Navbar = () => {
     if (user.role === 'citizen') {
       return (
         <>
-          <Link to="/dashboard/report-issue" className={navItemClass('report-issue')}>
+          <Link to="/report-issue" className={navItemClass('report-issue')}>
             <PlusCircle className="w-4 h-4" /> Report Issue
           </Link>
-          <Link to="/dashboard/manage-complaints" className={navItemClass('manage-complaints')}>
+          <Link to="/view-complaints" className={navItemClass('view-complaints')}>
             <HeartHandshake className="w-4 h-4" /> My Complaints
           </Link>
-          <Link to="/dashboard/facility-requests" className={navItemClass('facility-requests')}>
+          <Link to="/facility-requests" className={navItemClass('facility-requests')}>
             <Leaf className="w-4 h-4" /> Facility Requests
           </Link>
         </>
@@ -56,71 +59,100 @@ const Navbar = () => {
     localStorage.removeItem('user');
     setUser(null);
     navigate('/');
+    setMobileMenuOpen(false);
   };
 
   return (
     <>
-      <nav className="border-b border-stone-200 sticky top-0 bg-white/80 backdrop-blur-md z-50">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="bg-stone-900 p-2 rounded-lg">
-                <Building2 className="text-white w-4 h-4" />
-              </div>
-              <span className="text-lg font-bold tracking-tight text-stone-900 hidden sm:block">ApleShahar</span>
-            </Link>
+      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity flex-shrink-0">
+            <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-2 rounded-lg">
+              <Building2 className="text-white w-5 h-5" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent hidden sm:inline-block">ApleShahar</span>
+          </Link>
 
-            {/* Desktop Navigation Links */}
-            {user && (
-              <div className="hidden md:flex items-center gap-2 border-l border-stone-200 pl-8">
-                {renderDashboardLinks()}
-              </div>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-4">
+          {/* Desktop Navigation Links */}
+          {user && !isAuthPage && (
+            <div className="hidden lg:flex items-center gap-1 border-l border-slate-200 pl-8 ml-8">
+              {renderDashboardLinks()}
+            </div>
+          )}
+
+          {/* Right Section */}
+          <div className="flex items-center gap-4 ml-auto">
             {!user ? (
               isAuthPage ? (
-                <Link to="/" className="text-stone-500 hover:text-stone-900 text-sm font-semibold flex items-center gap-2 transition-colors">
+                <Link 
+                  to="/" 
+                  className="text-slate-600 hover:text-slate-900 text-sm font-semibold flex items-center gap-2 transition-colors"
+                >
                   <Home className="w-4 h-4" />
-                  <span className="hidden sm:block">Back to home</span>
+                  <span className="hidden sm:block">Home</span>
                 </Link>
               ) : (
-                <Link 
-                  to="/login" 
-                  className="bg-stone-900 hover:bg-stone-800 text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors flex items-center gap-2"
-                >
-                  Log in <ArrowRight className="w-4 h-4"/>
-                </Link>
+                <>
+                  <Link 
+                    to="/login" 
+                    className="hidden sm:block text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors px-4 py-2"
+                  >
+                    Sign In
+                  </Link>
+                  <Link 
+                    to="/signup" 
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+                  >
+                    Get Started <ArrowRight className="w-4 h-4"/>
+                  </Link>
+                </>
               )
             ) : (
               <>
-                <div className="hidden md:flex flex-col text-right mr-2">
-                  <span className="text-xs font-bold text-stone-900">{user.name}</span>
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                    {user.role === 'authority' ? 'Authority Portal' : 'Citizen Portal'}
-                  </span>
+                {/* User Info - Desktop */}
+                <div className="hidden md:flex flex-col items-end pr-4 border-r border-slate-200">
+                  <span className="text-sm font-semibold text-slate-900">{user.name}</span>
+                  <span className="text-xs text-slate-500">{user.role === 'authority' ? 'Authority' : 'Citizen'}</span>
                 </div>
+
+                {/* Logout Button */}
                 <button 
                   onClick={handleLogout}
-                  className="px-4 py-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900 border border-stone-200 hover:border-stone-300 rounded-lg transition-all flex items-center gap-2"
-                  title="Log out"
+                  className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-lg transition-all font-semibold text-sm"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span className="text-sm font-semibold hidden sm:block">Logout</span>
+                  Logout
+                </button>
+
+                {/* Mobile Menu Button */}
+                <button 
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                 </button>
               </>
             )}
           </div>
         </div>
-      </nav>
 
-      {/* Mobile Navigation Dropdown for logged in users */}
-      {user && (
-        <div className="md:hidden bg-white border-b border-stone-200 px-4 py-3 flex gap-2 overflow-x-auto shadow-sm">
-          {renderDashboardLinks()}
-        </div>
-      )}
+        {/* Mobile Menu */}
+        {user && mobileMenuOpen && !isAuthPage && (
+          <div className="lg:hidden bg-white border-t border-slate-200 px-6 py-4 space-y-2">
+            <div className="flex flex-col gap-2 mb-4">
+              {renderDashboardLinks()}
+            </div>
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-lg transition-all font-semibold text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
+        )}
+      </nav>
     </>
   );
 };

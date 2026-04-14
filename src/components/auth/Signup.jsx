@@ -1,131 +1,332 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Building2, User, ShieldAlert, ArrowRight, Home } from 'lucide-react';
+import React, { useState } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import {
+  Building2,
+  User,
+  ShieldAlert,
+  ArrowRight,
+  Mail,
+  Phone,
+  Lock,
+  MapPin,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 
 const Signup = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState(location.state?.tab || 'citizen');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [role, setRole] = useState(location.state?.tab || "citizen");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    contact: "",
+    password: "",
+    ward: "",
+    securityCode: "",
+  });
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const getRequiredFields = () => {
+    return role === "authority"
+      ? ["name", "email", "contact", "securityCode", "password"]
+      : ["name", "email", "contact", "ward", "password"];
+  };
+
+  const validateForm = () => {
+    const requiredFields = getRequiredFields();
+
+    if (!formData.name) return "Please tell us your name.";
+    if (!formData.email) return "Please provide an email address.";
+    if (!formData.password)
+      return "Please set a password to secure your account.";
+    if (!formData.contact) return "Please provide a contact number.";
+
+    if (role === "authority" && !formData.securityCode) {
+      return "Please provide a security code.";
+    }
+    if (role === "citizen" && !formData.ward) {
+      return "Please select your ward.";
+    }
+
+    return null;
+  };
 
   const handleSignup = (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
-    if (!name) {
-      return setError('Please tell us your name.');
-    }
-    if (!email || !password) {
-      return setError('Please provide an email and password to secure your account.');
+    const validationError = validateForm();
+    if (validationError) {
+      return setError(validationError);
     }
 
-    localStorage.setItem('user', JSON.stringify({ name, role: activeTab, email }));
+    const userData = {
+      name: formData.name,
+      email: formData.email,
+      contact: formData.contact,
+      password: formData.password,
+      role,
+      ...(role === "citizen" && { ward: formData.ward }),
+      ...(role === "authority" && { securityCode: formData.securityCode }),
+    };
 
-    const path = activeTab === 'citizen' ? 'report-issue' : 'manage-complaints';
-    navigate(`/dashboard/${path}`, { state: { role: activeTab } });
+    console.log("Form Data:", userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+
+    const path = role === "citizen" ? "report-issue" : "manage-complaints";
+    navigate(`/dashboard/${path}`, { state: { role } });
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans flex flex-col">
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <h2 className="text-center text-3xl font-bold tracking-tight text-stone-900">Create an account</h2>
-          <p className="mt-2 text-center text-sm text-stone-600">
-            Already have an account?{' '}
-            <Link to="/login" state={{ tab: activeTab }} className="font-semibold text-blue-600 hover:text-blue-500 transition-colors">
-              Sign in here
-            </Link>
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans relative overflow-hidden">
 
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow-sm sm:rounded-xl sm:px-10 border border-stone-200">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <h2 className="mt-2 text-center text-4xl font-bold tracking-tight text-slate-900">
+          Create Account
+        </h2>
+      </div>
 
-            {/* Role Tabs */}
-            <div className="flex p-1 bg-stone-100 rounded-lg mb-8">
+      <div className="mt-10 sm:mx-auto sm:w-full  relative z-10">
+        <div className="bg-white/95 backdrop-blur-sm py-10 px-6 shadow-xl sm:rounded-2xl sm:px-12 border border-white/50 rounded-2xl">
+          {/* Role Selection Tabs */}
+          <div className="mb-8">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              Select your role
+            </p>
+            <div className="flex gap-3 p-1 bg-gradient-to-r from-slate-100 to-slate-50 rounded-xl">
               <button
-                onClick={() => { setActiveTab('citizen'); setError(''); }}
-                className={`flex-1 flex justify-center items-center gap-2 py-2 text-sm font-semibold rounded-md transition-all ${activeTab === 'citizen'
-                    ? 'bg-white text-stone-900 shadow-sm border border-stone-200/50'
-                    : 'text-stone-500 hover:text-stone-700'
-                  }`}
+                onClick={() => {
+                  setRole("citizen");
+                  setError("");
+                }}
+                className={`flex-1 flex justify-center items-center gap-2 py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                  role === "citizen"
+                    ? "bg-white text-indigo-600 shadow-md border border-indigo-100/50"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
               >
-                <User className="w-4 h-4" /> Citizen
+                <User className="w-5 h-5" /> Citizen
               </button>
               <button
-                onClick={() => { setActiveTab('authority'); setError(''); }}
-                className={`flex-1 flex justify-center items-center gap-2 py-2 text-sm font-semibold rounded-md transition-all ${activeTab === 'authority'
-                    ? 'bg-white text-stone-900 shadow-sm border border-stone-200/50'
-                    : 'text-stone-500 hover:text-stone-700'
-                  }`}
+                onClick={() => {
+                  setRole("authority");
+                  setError("");
+                }}
+                className={`flex-1 flex justify-center items-center gap-2 py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                  role === "authority"
+                    ? "bg-white text-indigo-600 shadow-md border border-indigo-100/50"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
               >
-                <ShieldAlert className="w-4 h-4" /> Authority
+                <ShieldAlert className="w-5 h-5" /> Authority
               </button>
             </div>
+          </div>
 
-            <form className="space-y-6" onSubmit={handleSignup}>
-              {error && (
-                <div className="bg-red-50 border border-red-100 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-red-800">{error}</p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-semibold leading-6 text-stone-900">Full name</label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="block w-full rounded-lg border-0 py-2.5 px-4 text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 placeholder:text-stone-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
-                    placeholder="e.g. Alex Doe"
-                    required
-                  />
-                </div>
+          <form className="space-y-5" onSubmit={handleSignup}>
+            {/* Error Alert */}
+            {error && (
+              <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 p-4 rounded-lg flex gap-3 animate-in fade-in slide-in-from-top">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm font-medium text-red-800">{error}</p>
               </div>
+            )}
 
-              <div>
-                <label className="block text-sm font-semibold leading-6 text-stone-900">Email address</label>
-                <div className="mt-2">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full rounded-lg border-0 py-2.5 px-4 text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 placeholder:text-stone-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
-                    placeholder="hello@example.com"
-                    required
-                  />
+            {/* Name Field */}
+            <div className="group">
+              <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">
+                Full name
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                  <User className="w-5 h-5" />
                 </div>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="block w-full pl-12 pr-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 sm:text-sm"
+                  placeholder="e.g. Alex Doe"
+                  required
+                />
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold leading-6 text-stone-900">Password</label>
-                <div className="mt-2">
+            {/* Email Field */}
+            <div className="group">
+              <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">
+                Email address
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="block w-full pl-12 pr-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 sm:text-sm"
+                  placeholder="hello@example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Contact Field */}
+            <div className="group">
+              <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">
+                Contact number
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <input
+                  type="tel"
+                  name="contact"
+                  value={formData.contact}
+                  onChange={handleChange}
+                  className="block w-full pl-12 pr-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 sm:text-sm"
+                  placeholder="e.g. +91 98765 43210"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Authority: Security Code Field */}
+            {role === "authority" && (
+              <div className="group animate-in fade-in slide-in-from-top-4 duration-300">
+                <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">
+                  Security code
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                    <Lock className="w-5 h-5" />
+                  </div>
                   <input
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full rounded-lg border-0 py-2.5 px-4 text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 placeholder:text-stone-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
-                    placeholder="••••••••"
+                    name="securityCode"
+                    value={formData.securityCode}
+                    onChange={handleChange}
+                    className="block w-full pl-12 pr-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 sm:text-sm"
+                    placeholder="Enter security code"
                     required
                   />
                 </div>
               </div>
+            )}
 
-              <div>
-                <button
-                  type="submit"
-                  className="flex w-full justify-center items-center gap-2 rounded-lg bg-stone-900 px-3 py-3 text-sm font-semibold text-white shadow-sm hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 transition-all"
-                >
-                  Create account <ArrowRight className="w-4 h-4" />
-                </button>
+            {/* Citizen: Ward Field */}
+            {role === "citizen" && (
+              <div className="group animate-in fade-in slide-in-from-top-4 duration-300">
+                <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">
+                  Ward number
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-3.5 text-slate-400 pointer-events-none">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <select
+                    name="ward"
+                    value={formData.ward}
+                    onChange={handleChange}
+                    className="block w-full pl-12 pr-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 sm:text-sm appearance-none"
+                    required
+                  >
+                    <option value="">Select your ward</option>
+                    <option value="1">Ward 1</option>
+                    <option value="2">Ward 2</option>
+                    <option value="3">Ward 3</option>
+                    <option value="4">Ward 4</option>
+                    <option value="5">Ward 5</option>
+                    <option value="6">Other</option>
+                  </select>
+                  <div className="absolute right-3 top-3.5 text-slate-400 pointer-events-none">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                {formData.ward === "6" && (
+                  <input
+                    type="text"
+                    name="wardOther"
+                    value={formData.wardOther || ""}
+                    onChange={handleChange}
+                    className="block w-full px-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 mt-3 sm:text-sm"
+                    placeholder="Specify your ward"
+                  />
+                )}
               </div>
-            </form>
-          </div>
+            )}
+
+            {/* Password Field */}
+            <div className="group">
+              <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="block w-full pl-12 pr-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 sm:text-sm"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-1.5">
+                Use at least 8 characters
+              </p>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-center">
+              <button
+                type="submit"
+                className="w-full lg:w-[50%] mt-8 flex justify-center items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-3.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all duration-300 cursor-pointer active:scale-95"
+              >
+                Create account <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="mt-4 text-center text-sm text-slate-600">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                state={{ tab: role }}
+                className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
+              >
+                Sign in
+              </Link>
+            </p>
+          </form>
+
+          {/* Footer text */}
+          <p className="text-xs text-center text-slate-500 mt-6">
+            By signing up, you agree to our Terms of Service and Privacy Policy
+          </p>
         </div>
       </div>
     </div>
