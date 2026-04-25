@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowRight, Mail, Lock, AlertCircle } from 'lucide-react';
-import { getUserRole, loginUser, setStoredToken, setStoredUser } from '../../lib/api';
+import { fetchMe, getUserRole, loginUser, setStoredToken, setStoredUser } from '../../lib/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -29,9 +29,7 @@ const Login = () => {
     setError('');
 
     const validationError = validateForm();
-    if (validationError) {
-      return setError(validationError);
-    }
+    if (validationError) return setError(validationError);
 
     try {
       setLoading(true);
@@ -41,21 +39,35 @@ const Login = () => {
       });
 
       const token = response?.session?.access_token;
-      const user = response?.user;
+      const authUser = response?.user;
 
-      if (!token || !user) {
+      if (!token || !authUser) {
         throw new Error('Invalid login response from server.');
       }
 
+      // Store token first so fetchMe() can attach the Authorization header
       setStoredToken(token);
-      const role = getUserRole(user);
-      const normalizedUser = {
-        ...user,
-        role,
-        ward_no: user?.ward_no || user?.user_metadata?.ward_no || user?.ward || null,
-      };
-      setStoredUser(normalizedUser);
 
+      // Fetch the real DB user profile — role & ward_no live in the `users` table,
+      // NOT in the Supabase JWT, so we always need this call after login.
+      let dbProfile = null;
+      try {
+        const meRes = await fetchMe();
+        dbProfile = meRes?.user ?? null;
+      } catch (_) {
+        // If fetchMe fails for any reason, fall back gracefully
+      }
+
+      const mergedUser = {
+        ...authUser,
+        role:    dbProfile?.role    ?? getUserRole(authUser),
+        ward_no: dbProfile?.ward_no ?? authUser?.user_metadata?.ward_no ?? null,
+        name:    dbProfile?.name    ?? authUser?.user_metadata?.full_name ?? '',
+        contact: dbProfile?.contact ?? null,
+      };
+      setStoredUser(mergedUser);
+
+      const role = mergedUser.role;
       navigate(role === 'authority' ? '/view-complaints' : '/report-issue', { replace: true });
     } catch (err) {
       setError(err?.payload?.error || err?.message || 'Unable to login.');
@@ -84,7 +96,7 @@ const Login = () => {
               </div>
             )}
 
-            {/* Email Field */}
+            {/* Email */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Email address</label>
               <div className="relative">
@@ -103,7 +115,7 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Password</label>
               <div className="relative">
@@ -122,30 +134,29 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
               className="w-full mt-8 flex justify-center items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-3.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all duration-300 cursor-pointer active:scale-95"
             >
-              {loading ? 'Signing in...' : <>Sign in <ArrowRight className="w-4 h-4" /></>}
+              {loading ? 'Signing in...' : <><span>Sign in</span> <ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
 
-          {/* Footer text */}
           <p className="text-xs text-center text-slate-500 mt-6">
             Secure login with encrypted connection
           </p>
-          
-        <p className="mt-4 text-center text-sm text-slate-600">
-          Don't have an account?{' '}
-          <Link to="/signup" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors">
-            Create one
-          </Link>
-        </p>
-        {location.state?.message && (
-          <p className="mt-3 text-center text-sm text-emerald-700">{location.state.message}</p>
-        )}
+
+          <p className="mt-4 text-center text-sm text-slate-600">
+            Don't have an account?{' '}
+            <Link to="/signup" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors">
+              Create one
+            </Link>
+          </p>
+          {location.state?.message && (
+            <p className="mt-3 text-center text-sm text-emerald-700">{location.state.message}</p>
+          )}
         </div>
       </div>
     </div>

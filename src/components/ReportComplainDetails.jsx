@@ -2,8 +2,9 @@ import React, { useState, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Leaf, MapPin, Camera, Navigation, X } from 'lucide-react';
-import { getStoredUser, submitComplaint } from '../lib/api';
+import { MapPin, Camera, Navigation, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { getStoredUser, getUserWard, handleApiError, submitComplaint } from '../lib/api';
+import { useNavigate } from 'react-router-dom';
 
 // Fix for default leaflet marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -13,26 +14,64 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Constants
-const DEFAULT_CENTER = [18.5204, 73.8567];
+// ─── Constants — Vasai-Virar Municipal Corporation ───────────────────────────
+// 29 wards derived from the backend's all_wards.json (org_no 24).
+// Center coordinates computed as bounding-box midpoints of each ward polygon.
+const DEFAULT_CENTER = [19.428, 72.827]; // geographic center of Vasai-Virar
+
 const WARDS = [
-  { id: 'W-01', name: 'Pune Central', coordinates: [18.5204, 73.8567] },
-  { id: 'W-02', name: 'Kothrud', coordinates: [18.5074, 73.8077] },
-  { id: 'W-03', name: 'Viman Nagar', coordinates: [18.5679, 73.9143] },
-  { id: 'W-04', name: 'Baner', coordinates: [18.559, 73.7868] },
-  { id: 'W-05', name: 'Hadapsar', coordinates: [18.4966, 73.9416] }
+  { id: 1,  name: 'Ward 1',  coordinates: [19.48618, 72.86282] },
+  { id: 2,  name: 'Ward 2',  coordinates: [19.47177, 72.78948] },
+  { id: 3,  name: 'Ward 3',  coordinates: [19.46545, 72.81495] },
+  { id: 4,  name: 'Ward 4',  coordinates: [19.45840, 72.81818] },
+  { id: 5,  name: 'Ward 5',  coordinates: [19.44826, 72.80621] },
+  { id: 6,  name: 'Ward 6',  coordinates: [19.44271, 72.82833] },
+  { id: 7,  name: 'Ward 7',  coordinates: [19.45035, 72.82782] },
+  { id: 8,  name: 'Ward 8',  coordinates: [19.43832, 72.84538] },
+  { id: 9,  name: 'Ward 9',  coordinates: [19.42864, 72.82376] },
+  { id: 10, name: 'Ward 10', coordinates: [19.43966, 72.81776] },
+  { id: 11, name: 'Ward 11', coordinates: [19.43138, 72.80492] },
+  { id: 12, name: 'Ward 12', coordinates: [19.45001, 72.77567] },
+  { id: 13, name: 'Ward 13', coordinates: [19.41527, 72.78456] },
+  { id: 14, name: 'Ward 14', coordinates: [19.40718, 72.81023] },
+  { id: 15, name: 'Ward 15', coordinates: [19.41448, 72.82293] },
+  { id: 16, name: 'Ward 16', coordinates: [19.42414, 72.82138] },
+  { id: 17, name: 'Ward 17', coordinates: [19.42018, 72.82686] },
+  { id: 18, name: 'Ward 18', coordinates: [19.42063, 72.84194] },
+  { id: 19, name: 'Ward 19', coordinates: [19.43762, 72.89138] },
+  { id: 20, name: 'Ward 20', coordinates: [19.39851, 72.86631] },
+  { id: 21, name: 'Ward 21', coordinates: [19.40877, 72.84093] },
+  { id: 22, name: 'Ward 22', coordinates: [19.39566, 72.83382] },
+  { id: 23, name: 'Ward 23', coordinates: [19.39193, 72.81841] },
+  { id: 24, name: 'Ward 24', coordinates: [19.38137, 72.81067] },
+  { id: 25, name: 'Ward 25', coordinates: [19.37238, 72.78553] },
+  { id: 26, name: 'Ward 26', coordinates: [19.37464, 72.83722] },
+  { id: 27, name: 'Ward 27', coordinates: [19.37278, 72.90632] },
+  { id: 28, name: 'Ward 28', coordinates: [19.35305, 72.82931] },
+  { id: 29, name: 'Ward 29', coordinates: [19.33605, 72.80448] },
 ];
 
-// Helper Components
+const ISSUE_TYPES = [
+  { value: 'pothole',      label: 'Pothole / Road Damage' },
+  { value: 'streetlight',  label: 'Streetlight Not Working' },
+  { value: 'garbage',      label: 'Garbage / Waste Issue' },
+  { value: 'water',        label: 'Water Supply / Leak' },
+  { value: 'drainage',     label: 'Drainage / Sewage' },
+  { value: 'tree',         label: 'Fallen Tree / Branch' },
+  { value: 'encroachment', label: 'Encroachment' },
+  { value: 'noise',        label: 'Noise Complaint' },
+  { value: 'other',        label: 'Other' },
+];
+
+// ─── Map helpers ─────────────────────────────────────────────────────────────
+
 const LocationMarker = ({ position, setPosition }) => {
   const map = useMapEvents({
     click(e) { setPosition(e.latlng); },
   });
-
   React.useEffect(() => {
     setTimeout(() => map.invalidateSize(), 100);
   }, [map]);
-
   return position ? <Marker position={position} /> : null;
 };
 
@@ -44,245 +83,234 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
-// Helper Functions
-const getWardFromCoordinates = (lat, lng) => {
-  if (lat > 18.55 && lng > 73.85) return 'W-03'; // Viman Nagar
-  if (lat < 18.51 && lng < 73.82) return 'W-02'; // Kothrud
-  if (lat < 18.50 && lng > 73.90) return 'W-05'; // Hadapsar
-  return 'W-01'; // Default: Pune Central
+/**
+ * Rough point-in-ward detection for Vasai-Virar.
+ * Returns the ward id (integer) whose center is closest to the given coords.
+ */
+const getNearestWard = (lat, lng) => {
+  let best = WARDS[0];
+  let bestDist = Infinity;
+  for (const w of WARDS) {
+    const dlat = w.coordinates[0] - lat;
+    const dlng = w.coordinates[1] - lng;
+    const dist = dlat * dlat + dlng * dlng;
+    if (dist < bestDist) { bestDist = dist; best = w; }
+  }
+  return best.id;
 };
 
-const setWardAndPosition = (wardId, setSelectedWard, setMapCenter, setPosition) => {
-  setSelectedWard(wardId);
-  const ward = WARDS.find(w => w.id === wardId);
-  if (ward) {
-    setMapCenter(ward.coordinates);
-    setPosition({ lat: ward.coordinates[0], lng: ward.coordinates[1] });
-  }
-};
+// ─── Component ───────────────────────────────────────────────────────────────
 
 const ReportComplainDetails = () => {
   const user = getStoredUser();
+  const navigate = useNavigate();
 
-  // State
+  // Separate file object (for upload) from preview URL
+  const [photoFile, setPhotoFile]       = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    selectedWard: '',
+    prob_description: '',
+    issue_type: '',
+    selectedWard: '',   // stored as integer (ward id)
     position: null,
-    photo: null,
     mapCenter: DEFAULT_CENTER,
-    isAutoDetecting: false
+    isAutoDetecting: false,
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError]         = useState('');
+  const [success, setSuccess]     = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fileInputRef = useRef(null);
 
-  // Event Handlers
+  // ── Event handlers ──
+
   const handleInputChange = useCallback((field) => (e) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
   }, []);
 
   const handleWardChange = useCallback((e) => {
-    const wardId = e.target.value;
-    setFormData(prev => ({ ...prev, selectedWard: wardId }));
-    const ward = WARDS.find(w => w.id === wardId);
-    if (ward) {
-      setFormData(prev => ({
-        ...prev,
-        mapCenter: ward.coordinates,
-        position: { lat: ward.coordinates[0], lng: ward.coordinates[1] }
-      }));
+    // DOM always gives a string; parse to int to match numeric WARDS ids
+    const wardId = parseInt(e.target.value, 10);
+    if (isNaN(wardId)) {
+      setFormData(prev => ({ ...prev, selectedWard: '' }));
+      return;
     }
+    const ward = WARDS.find(w => w.id === wardId);
+    setFormData(prev => ({
+      ...prev,
+      selectedWard: wardId,
+      ...(ward ? {
+        mapCenter: ward.coordinates,
+        position: { lat: ward.coordinates[0], lng: ward.coordinates[1] },
+      } : {}),
+    }));
   }, []);
 
   const autoDetectWard = useCallback(() => {
     setFormData(prev => ({ ...prev, isAutoDetecting: true }));
 
-    const handleGeolocationSuccess = (position) => {
-      const { latitude, longitude } = position.coords;
-      const detectedWard = getWardFromCoordinates(latitude, longitude);
-      setWardAndPosition(
-        detectedWard,
-        (ward) => setFormData(prev => ({ ...prev, selectedWard: ward })),
-        (center) => setFormData(prev => ({ ...prev, mapCenter: center })),
-        (pos) => setFormData(prev => ({ ...prev, position: pos, isAutoDetecting: false }))
-      );
+    const applyWard = (wardId, lat, lng) => {
+      const ward = WARDS.find(w => w.id === wardId);
+      setFormData(prev => ({
+        ...prev,
+        selectedWard: wardId,
+        isAutoDetecting: false,
+        ...(ward ? {
+          mapCenter: ward.coordinates,
+          position: { lat: lat ?? ward.coordinates[0], lng: lng ?? ward.coordinates[1] },
+        } : {}),
+      }));
     };
 
-    const handleGeolocationError = () => {
-      const randomWard = WARDS[Math.floor(Math.random() * WARDS.length)];
-      setWardAndPosition(
-        randomWard.id,
-        (ward) => setFormData(prev => ({ ...prev, selectedWard: ward })),
-        (center) => setFormData(prev => ({ ...prev, mapCenter: center })),
-        (pos) => setFormData(prev => ({ ...prev, position: pos, isAutoDetecting: false }))
-      );
+    const onSuccess = (pos) => {
+      const { latitude, longitude } = pos.coords;
+      const detected = getNearestWard(latitude, longitude);
+      applyWard(detected, latitude, longitude);
+    };
+
+    const onError = () => {
+      // Default to geographic center ward
+      applyWard(WARDS[0].id, null, null);
     };
 
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        handleGeolocationSuccess,
-        handleGeolocationError,
-        { timeout: 10000 }
-      );
+      navigator.geolocation.getCurrentPosition(onSuccess, onError, { timeout: 10000 });
     } else {
-      handleGeolocationError();
+      onError();
     }
   }, []);
 
   const handlePhotoChange = useCallback((e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, photo: reader.result }));
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result);
+    reader.readAsDataURL(file);
   }, []);
 
   const removePhoto = useCallback(() => {
-    setFormData(prev => ({ ...prev, photo: null }));
-    fileInputRef.current?.value && (fileInputRef.current.value = '');
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
   const validateForm = () => {
-    if (!formData.title.trim()) {
-      alert('Please enter a title for your complaint.');
-      return false;
-    }
-    if (!formData.description.trim()) {
-      alert('Please describe the problem in detail.');
-      return false;
-    }
-    if (!formData.selectedWard) {
-      alert('Please select or auto-detect your ward.');
-      return false;
-    }
-    if (!formData.position) {
-      alert('Please pin the location on the map.');
-      return false;
-    }
-    return true;
+    if (!formData.prob_description.trim()) return 'Please describe the problem in detail.';
+    if (!formData.issue_type)              return 'Please select an issue type.';
+    if (!formData.selectedWard)            return 'Please select or auto-detect your ward.';
+    if (!formData.position)                return 'Please pin the location on the map.';
+    if (!photoFile)                        return 'Please attach a photo of the issue (required).';
+    return null;
   };
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      description: '',
+      prob_description: '',
+      issue_type: '',
       selectedWard: '',
       position: null,
-      photo: null,
       mapCenter: DEFAULT_CENTER,
-      isAutoDetecting: false
+      isAutoDetecting: false,
     });
-    fileInputRef.current?.value && (fileInputRef.current.value = '');
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!validateForm()) return;
 
-    const wardName = WARDS.find(w => w.id === formData.selectedWard)?.name || 'Unknown';
-    const complaintPayload = {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      ward_no: formData.selectedWard,
-      ward: formData.selectedWard,
-      location: {
-        latitude: formData.position.lat,
-        longitude: formData.position.lng,
-      },
-      latitude: formData.position.lat,
-      longitude: formData.position.lng,
-      photo: formData.photo || null,
-      ward_name: wardName,
-      contact: user?.contact || user?.user_metadata?.contact || null,
+    const validationError = validateForm();
+    if (validationError) { setError(validationError); return; }
+
+    const coordsString = `${formData.position.lat.toFixed(6)},${formData.position.lng.toFixed(6)}`;
+
+    // Backend service does parseInt(wardNo) — send as string of a plain number
+    const fields = {
+      prob_description: formData.prob_description.trim(),
+      ward: String(formData.selectedWard),
+      location_coords: coordsString,
+      issue_type: formData.issue_type,
     };
 
-    setSubmitting(true);
-    submitComplaint(complaintPayload)
-      .then(() => {
-        setSuccess('Complaint submitted successfully.');
-        resetForm();
-      })
-      .catch((err) => {
-        setError(err?.payload?.error || err?.message || 'Unable to submit complaint.');
-      })
-      .finally(() => {
-        setSubmitting(false);
-      });
+    try {
+      setSubmitting(true);
+      await submitComplaint(fields, photoFile);
+      setSuccess('Your complaint has been submitted successfully!');
+      resetForm();
+    } catch (err) {
+      setError(handleApiError(err, navigate));
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  // ── Render ──
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">
-            Report a Problem
-          </h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Report a Problem</h1>
           <p className="text-slate-600 text-sm md:text-base">
-            Help us improve our community by reporting issues
+            Help improve Vasai-Virar by reporting civic issues in your ward
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
           <div className="p-6 md:p-8 space-y-6">
 
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 {success}
               </div>
             )}
 
-            {/* Title Field */}
+            {/* Issue Type */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Complaint Title *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={handleInputChange('title')}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all text-slate-700 placeholder:text-slate-400"
-                placeholder="e.g., Broken street light on Main Road"
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Issue Type *</label>
+              <select
+                value={formData.issue_type}
+                onChange={handleInputChange('issue_type')}
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all text-slate-700 bg-white"
                 required
-              />
+              >
+                <option value="">Select issue type</option>
+                {ISSUE_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Problem Description */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Problem Description *
-              </label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Problem Description *</label>
               <textarea
                 rows="4"
-                value={formData.description}
-                onChange={handleInputChange('description')}
+                value={formData.prob_description}
+                onChange={handleInputChange('prob_description')}
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all text-slate-700 placeholder:text-slate-400 resize-none"
                 placeholder="Please describe the problem in detail..."
                 required
               />
             </div>
 
-            {/* Ward Number with Auto-detect */}
+            {/* Ward — 29 Vasai-Virar wards */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-3">
-                Ward Number *
-              </label>
+              <label className="block text-sm font-semibold text-slate-700 mb-3">Ward Number *</label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1">
                   <select
@@ -290,9 +318,9 @@ const ReportComplainDetails = () => {
                     onChange={handleWardChange}
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all text-slate-700 bg-white"
                   >
-                    <option value="">Select Ward Manually</option>
+                    <option value="">Select your ward</option>
                     {WARDS.map(w => (
-                      <option key={w.id} value={w.id}>{w.id} - {w.name}</option>
+                      <option key={w.id} value={w.id}>Ward {w.id}</option>
                     ))}
                   </select>
                 </div>
@@ -304,7 +332,7 @@ const ReportComplainDetails = () => {
                 >
                   {formData.isAutoDetecting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Detecting...
                     </>
                   ) : (
@@ -322,13 +350,13 @@ const ReportComplainDetails = () => {
               )}
             </div>
 
-            {/* Image Upload */}
+            {/* Photo — required by backend */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Attach Photo (Optional)
+                Attach Photo <span className="text-red-500">*</span>
               </label>
               <div className="space-y-3">
-                {!formData.photo ? (
+                {!photoPreview ? (
                   <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-emerald-400 transition-colors">
                     <input
                       ref={fileInputRef}
@@ -339,26 +367,19 @@ const ReportComplainDetails = () => {
                       className="hidden"
                       id="photo-upload"
                     />
-                    <label
-                      htmlFor="photo-upload"
-                      className="cursor-pointer flex flex-col items-center gap-3"
-                    >
+                    <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center gap-3">
                       <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
                         <Camera className="w-6 h-6 text-emerald-600" />
                       </div>
                       <div>
                         <p className="text-slate-700 font-medium">Take or upload photo</p>
-                        <p className="text-slate-500 text-sm">Tap to capture or select from gallery</p>
+                        <p className="text-slate-500 text-sm">Required — helps authorities assess the issue</p>
                       </div>
                     </label>
                   </div>
                 ) : (
                   <div className="relative">
-                    <img
-                      src={formData.photo}
-                      alt="Captured"
-                      className="w-full h-48 object-cover rounded-xl border-2 border-emerald-200"
-                    />
+                    <img src={photoPreview} alt="Captured" className="w-full h-48 object-cover rounded-xl border-2 border-emerald-200" />
                     <button
                       type="button"
                       onClick={removePhoto}
@@ -367,14 +388,14 @@ const ReportComplainDetails = () => {
                       <X className="w-4 h-4" />
                     </button>
                     <p className="text-sm text-emerald-600 mt-2 font-medium text-center">
-                      ✓ Photo attached successfully
+                      ✓ {photoFile?.name}
                     </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Location/Map */}
+            {/* Map — centered on Vasai-Virar */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-rose-500" />
@@ -401,13 +422,18 @@ const ReportComplainDetails = () => {
               )}
             </div>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-emerald-600 text-white font-semibold text-lg py-4 rounded-xl hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-200 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              className="w-full bg-emerald-600 text-white font-semibold text-lg py-4 rounded-xl hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-200 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
             >
-              {submitting ? 'Submitting...' : 'Submit Complaint'}
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Submitting...
+                </span>
+              ) : 'Submit Complaint'}
             </button>
           </div>
         </form>

@@ -1,9 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { getStoredUser, getUserRole, resolveComplaint, updateComplaintStatus } from '../lib/api';
+import { ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react';
+import {
+  getStoredUser,
+  getUserRole,
+  handleApiError,
+  resolveComplaint,
+  updateComplaintStatus,
+} from '../lib/api';
 
-const sampleImage = 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=900&q=80';
+// Status options that match backend expected values
+const STATUS_OPTIONS = [
+  { value: 'pending',     label: 'Pending' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'resolved',    label: 'Resolved' },
+  { value: 'rejected',    label: 'Rejected' },
+];
+
+const STATUS_LABELS = {
+  pending:     'Pending',
+  in_progress: 'In Progress',
+  resolved:    'Resolved',
+  rejected:    'Rejected',
+};
 
 export default function ManageComplain() {
   const location = useLocation();
@@ -12,10 +31,14 @@ export default function ManageComplain() {
 
   const isCitizen = getUserRole(user) === 'citizen';
   const [complaint, setComplaint] = useState(null);
-  const [contractorName, setContractorName] = useState('');
-  const [status, setStatus] = useState('Just Reported');
+  const [status, setStatus] = useState('pending');
+  const [estimatedTime, setEstimatedTime] = useState('');
   const [resolvedDescription, setResolvedDescription] = useState('');
-  const [resolvedPhoto, setResolvedPhoto] = useState(null);
+
+  // Keep File object separate from preview URL
+  const [resolvedPhotoFile, setResolvedPhotoFile] = useState(null);
+  const [resolvedPhotoPreview, setResolvedPhotoPreview] = useState(null);
+
   const [savedMessage, setSavedMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -24,19 +47,19 @@ export default function ManageComplain() {
     const stateComplaint = location.state?.complaint;
     if (stateComplaint) {
       setComplaint(stateComplaint);
-      setContractorName(stateComplaint.contractor || '');
-      setStatus(stateComplaint.status || 'Just Reported');
+      // Normalize status: prefer rawStatus from ViewComplains mapping
+      const rawStatus = stateComplaint.rawStatus || stateComplaint.status || 'pending';
+      setStatus(STATUS_OPTIONS.find(o => o.value === rawStatus) ? rawStatus : 'pending');
       setResolvedDescription(stateComplaint.resolvedDescription || '');
-      setResolvedPhoto(stateComplaint.resolvedPhoto || null);
-      return;
     }
-  }, [location.state, location.search]);
+  }, [location.state]);
 
   const handleResolvedPhotoChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setResolvedPhotoFile(file);
     const reader = new FileReader();
-    reader.onloadend = () => setResolvedPhoto(reader.result);
+    reader.onloadend = () => setResolvedPhotoPreview(reader.result);
     reader.readAsDataURL(file);
   };
 
@@ -46,34 +69,33 @@ export default function ManageComplain() {
     setSavedMessage('');
     setError('');
 
-    const complaintId = complaint.id || complaint.raw?.id || complaint.raw?.complaint_id;
+    const complaintId =
+      complaint.raw?.complaint_id ||
+      complaint.raw?.id ||
+      complaint.id;
+
     if (!complaintId) {
-      setError('Complaint id is missing.');
+      setError('Complaint ID is missing.');
       return;
     }
 
     try {
       setSaving(true);
-      await updateComplaintStatus(complaintId, status);
 
-      if (status.toLowerCase() === 'fixed' || resolvedDescription || resolvedPhoto) {
-        await resolveComplaint(complaintId, {
-          resolved_description: resolvedDescription,
-          resolved_photo: resolvedPhoto,
-          contractor: contractorName,
-        });
+      // Always update status first
+      await updateComplaintStatus(complaintId, status, estimatedTime);
+
+      // If resolving, also call the resolve endpoint with FormData
+      if (status === 'resolved' || resolvedDescription || resolvedPhotoFile) {
+        await resolveComplaint(complaintId, resolvedDescription, resolvedPhotoFile);
       }
 
-      const updates = {
-        contractor: contractorName || complaint.contractor,
-        status,
-        resolvedDescription,
-        resolvedPhoto,
-      };
-      setComplaint((prev) => (prev ? { ...prev, ...updates } : prev));
+      setComplaint((prev) =>
+        prev ? { ...prev, status: STATUS_LABELS[status] || status, rawStatus: status } : prev
+      );
       setSavedMessage('Changes saved successfully.');
     } catch (err) {
-      setError(err?.payload?.error || err?.message || 'Failed to save complaint update.');
+      setError(handleApiError(err, navigate));
     } finally {
       setSaving(false);
     }
@@ -100,11 +122,18 @@ export default function ManageComplain() {
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="mx-auto max-w-6xl">
+        {/* Header */}
         <div className="mb-8 flex flex-col gap-4 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Manage report</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+              {isCitizen ? 'View report' : 'Manage report'}
+            </p>
             <h1 className="mt-3 text-3xl font-black text-slate-900 sm:text-4xl">{complaint.title}</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Handle this complaint with a focused authority workflow. Update status, assign contractors, and attach resolution evidence in one place.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+              {isCitizen
+                ? 'Track the status of your complaint here.'
+                : 'Handle this complaint with a focused authority workflow. Update status and attach resolution evidence in one place.'}
+            </p>
           </div>
           <button
             type="button"
@@ -116,25 +145,28 @@ export default function ManageComplain() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
+          {/* Left: Complaint Details */}
           <div className="space-y-6">
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-4">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-900">{complaint.status}</div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-900">
+                    {STATUS_LABELS[complaint.rawStatus] || complaint.status}
+                  </div>
                   <p className="text-sm text-slate-500">{complaint.location} • {complaint.date}</p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
                     <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Report ID</p>
-                    <p className="mt-2 font-semibold text-slate-900">{complaint.id}</p>
+                    <p className="mt-2 font-semibold text-slate-900 break-all">{complaint.id}</p>
                   </div>
                   <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
                     <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Ward</p>
                     <p className="mt-2 font-semibold text-slate-900">{complaint.ward}</p>
                   </div>
                   <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-700">
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Category</p>
-                    <p className="mt-2 font-semibold text-slate-900">{complaint.location.split(' ')[0] || 'General'}</p>
+                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Issue Type</p>
+                    <p className="mt-2 font-semibold text-slate-900">{complaint.title}</p>
                   </div>
                 </div>
               </div>
@@ -151,14 +183,26 @@ export default function ManageComplain() {
                   </div>
                 </div>
                 <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50">
-                  <img
-                    src={complaint.photo || sampleImage}
-                    alt="Complaint evidence"
-                    className="h-full w-full object-cover"
-                  />
+                  {complaint.photo ? (
+                    <img
+                      src={complaint.photo}
+                      alt="Complaint evidence"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-40 flex items-center justify-center text-slate-400 text-sm">
+                      No photo attached
+                    </div>
+                  )}
                   <div className="bg-slate-50 px-5 py-4 text-sm text-slate-700">
-                    <p className="font-semibold text-slate-900">{complaint.photo ? 'Attached evidence' : 'Sample evidence preview'}</p>
-                    <p className="mt-1 text-slate-600">Upload a resolution photo for the task when the issue is fixed.</p>
+                    <p className="font-semibold text-slate-900">
+                      {complaint.photo ? 'Attached evidence' : 'No evidence photo'}
+                    </p>
+                    {!isCitizen && (
+                      <p className="mt-1 text-slate-600">
+                        Upload a resolution photo when the issue is fixed.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -168,79 +212,151 @@ export default function ManageComplain() {
               <div className="flex items-center gap-3 text-slate-700">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                 <div>
-                  <p className="text-sm font-semibold">Recent update</p>
-                  <p className="text-sm text-slate-500">This page keeps all details focused for a clear decision.</p>
+                  <p className="text-sm font-semibold">Status overview</p>
+                  <p className="text-sm text-slate-500">Current status of this report.</p>
                 </div>
               </div>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <div className="rounded-3xl bg-slate-50 p-5">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Assigned team</p>
-                  <p className="mt-3 font-semibold text-slate-900">{complaint.contractor || 'Unassigned'}</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Current status</p>
+                  <p className="mt-3 font-semibold text-slate-900">
+                    {STATUS_LABELS[complaint.rawStatus] || complaint.status}
+                  </p>
                 </div>
                 <div className="rounded-3xl bg-slate-50 p-5">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Current status</p>
-                  <p className="mt-3 font-semibold text-slate-900">{complaint.status}</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Filed on</p>
+                  <p className="mt-3 font-semibold text-slate-900">{complaint.date}</p>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Right: Action Panel */}
           <div className="space-y-6">
             <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Action center</p>
-                  <h2 className="mt-2 text-2xl font-black text-slate-900">Take action</h2>
+                  <h2 className="mt-2 text-2xl font-black text-slate-900">
+                    {isCitizen ? 'Status' : 'Take action'}
+                  </h2>
                 </div>
                 <ShieldCheck className="h-6 w-6 text-slate-700" />
               </div>
 
               {savedMessage && (
-                <div className="mt-5 rounded-3xl bg-emerald-50 p-4 text-sm text-emerald-700">{savedMessage}</div>
+                <div className="mt-5 rounded-3xl bg-emerald-50 p-4 text-sm text-emerald-700 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  {savedMessage}
+                </div>
               )}
 
               {error && (
-                <div className="mt-5 rounded-3xl bg-red-50 p-4 text-sm text-red-700">{error}</div>
+                <div className="mt-5 rounded-3xl bg-red-50 p-4 text-sm text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {error}
+                </div>
               )}
 
               {isCitizen ? (
                 <div className="mt-6 space-y-4">
-                  <p className="text-sm leading-6 text-slate-600">Citizen view is read-only. Status updates are handled by authorities.</p>
+                  <div className="rounded-3xl bg-slate-50 p-5">
+                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Current status</p>
+                    <p className="mt-3 font-semibold text-slate-900">
+                      {STATUS_LABELS[complaint.rawStatus] || complaint.status}
+                    </p>
+                  </div>
+                  <p className="text-sm leading-6 text-slate-600">
+                    Status updates are handled by the authorities. You'll see changes reflected here.
+                  </p>
                 </div>
               ) : (
                 <form onSubmit={handleSave} className="mt-6 space-y-6">
-                  <div className="space-y-3">
-                    <label className="text-sm font-semibold text-slate-700">Assigned contractor</label>
-                    <input type="text" value={contractorName} onChange={(e) => setContractorName(e.target.value)} placeholder="e.g. City Works Team" className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100" />
-                  </div>
+                  {/* Status */}
                   <div className="space-y-3">
                     <label className="text-sm font-semibold text-slate-700">Update status</label>
-                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
-                      <option value="Just Reported">Just Reported</option>
-                      <option value="Helping">Helping out</option>
-                      <option value="Fixed">Fixed</option>
-                      <option value="Satisfied">Satisfied</option>
-                      <option value="Reopened">Reopened</option>
-                      <option value="Revoked">Revoked</option>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    >
+                      {STATUS_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   </div>
+
+                  {/* Estimated time */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-slate-700">Resolved description</label>
-                    <textarea rows="4" value={resolvedDescription} onChange={(e) => setResolvedDescription(e.target.value)} placeholder="Describe the final resolution" className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 resize-none" />
+                    <label className="text-sm font-semibold text-slate-700">Estimated resolution time</label>
+                    <input
+                      type="text"
+                      value={estimatedTime}
+                      onChange={(e) => setEstimatedTime(e.target.value)}
+                      placeholder="e.g. 3-5 business days"
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    />
                   </div>
+
+                  {/* Resolution description — shown when resolving */}
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-slate-700">Resolved image</label>
+                    <label className="text-sm font-semibold text-slate-700">
+                      Resolution description{status === 'resolved' ? ' *' : ' (optional)'}
+                    </label>
+                    <textarea
+                      rows="4"
+                      value={resolvedDescription}
+                      onChange={(e) => setResolvedDescription(e.target.value)}
+                      placeholder="Describe the final resolution"
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 resize-none"
+                    />
+                  </div>
+
+                  {/* Resolution image */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-slate-700">
+                      Resolution photo{status === 'resolved' ? ' (recommended)' : ' (optional)'}
+                    </label>
                     <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                      <input type="file" accept="image/*" capture="environment" onChange={handleResolvedPhotoChange} className="w-full text-sm text-slate-500 file:rounded-full file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700" />
-                      {resolvedPhoto && (
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleResolvedPhotoChange}
+                        className="w-full text-sm text-slate-500 file:rounded-full file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-slate-700"
+                      />
+                      {resolvedPhotoPreview && (
                         <div className="mt-4 relative">
-                          <img src={resolvedPhoto} alt="Resolved evidence" className="h-40 w-full rounded-3xl object-cover" />
-                          <button type="button" onClick={() => setResolvedPhoto(null)} className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/80 text-white transition hover:bg-slate-950">×</button>
+                          <img
+                            src={resolvedPhotoPreview}
+                            alt="Resolved evidence"
+                            className="h-40 w-full rounded-3xl object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => { setResolvedPhotoFile(null); setResolvedPhotoPreview(null); }}
+                            className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/80 text-white transition hover:bg-slate-950"
+                          >
+                            ×
+                          </button>
+                          <p className="text-xs text-slate-500 mt-2">{resolvedPhotoFile?.name}</p>
                         </div>
                       )}
                     </div>
                   </div>
-                  <button type="submit" disabled={saving} className="w-full rounded-3xl bg-slate-900 px-6 py-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">{saving ? 'Saving...' : 'Save changes'}</button>
+
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="w-full rounded-3xl bg-slate-900 px-6 py-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Saving...
+                      </span>
+                    ) : 'Save changes'}
+                  </button>
                 </form>
               )}
             </div>
