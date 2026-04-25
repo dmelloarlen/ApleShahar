@@ -1,46 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, HeartHandshake } from "lucide-react";
-
-const STORAGE_KEY = "complaintsData";
-
-const initialComplaints = [
-  {
-    id: "C-101",
-    title: "Pothole on Main St",
-    description:
-      "Large pothole causing traffic slowdowns and potential vehicle damage.",
-    status: "Fixed",
-    contractor: "City Works Team",
-    date: "2023-10-12",
-    location: "Main St & 4th Ave",
-    ward: "W-01",
-    photo: null,
-  },
-  {
-    id: "C-102",
-    title: "Broken Streetlight",
-    description: "Streetlight has been flickering and is now completely off.",
-    status: "Fixed",
-    contractor: null,
-    date: "2023-10-15",
-    location: "Oakwood Dr",
-    ward: "W-02",
-    photo: null,
-  },
-  {
-    id: "C-103",
-    title: "Flooded Pedestrian Walkway",
-    description: "Drainage seems blocked, causing severe flooding after rain.",
-    status: "Helping",
-    contractor: "Neighborhood Squad",
-    date: "2023-10-18",
-    location: "River Road",
-    ward: "W-03",
-    photo:
-      "https://images.unsplash.com/photo-1549237510-e01c8a53ff79?auto=format&fit=crop&w=900&q=80",
-  },
-];
+import { getMyComplaints, getStoredUser, getUserRole, getWardComplaints } from "../lib/api";
 
 const statusStyles = {
   Fixed: "bg-emerald-50 text-emerald-600 border-emerald-100",
@@ -51,28 +12,29 @@ const statusStyles = {
   "Just Reported": "bg-slate-50 text-slate-600 border-slate-100",
 };
 
+const toUiComplaint = (item) => ({
+  id: String(item?.id || item?.complaint_id || item?._id || 'N/A'),
+  title: item?.title || 'Untitled complaint',
+  description: item?.description || item?.details || 'No description available.',
+  status: item?.status || 'Just Reported',
+  contractor: item?.contractor || item?.assigned_to || null,
+  date: item?.created_at ? new Date(item.created_at).toLocaleDateString() : '-',
+  location: item?.location_name || item?.location || `${item?.latitude ?? '-'}, ${item?.longitude ?? '-'}`,
+  ward: item?.ward_no || item?.ward || '-',
+  photo: item?.photo || item?.image_url || null,
+  raw: item,
+});
+
 const ViewComplains = () => {
-  const [complaints, setComplaints] = useState(() => {
-    const item = localStorage.getItem(STORAGE_KEY);
-    if (!item) return initialComplaints;
-    try {
-      return JSON.parse(item);
-    } catch {
-      return initialComplaints;
-    }
-  });
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
-  const user = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem("user") || "null");
-    } catch {
-      return null;
-    }
-  }, []);
+  const user = useMemo(() => getStoredUser(), []);
 
-  const isCitizen = user?.role === "citizen";
+  const isCitizen = getUserRole(user) === "citizen";
 
   const filteredComplaints = complaints.filter(
     (complaint) =>
@@ -82,8 +44,26 @@ const ViewComplains = () => {
   );
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(complaints));
-  }, [complaints]);
+    const loadComplaints = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const data = isCitizen
+          ? await getMyComplaints()
+          : await getWardComplaints(user?.ward_no || user?.user_metadata?.ward_no);
+
+        const list = Array.isArray(data) ? data : (data?.complaints || []);
+        setComplaints(list.map(toUiComplaint));
+      } catch (err) {
+        setError(err?.payload?.error || err?.message || 'Unable to load complaints.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadComplaints();
+  }, [isCitizen, user]);
 
   const openComplaint = (complaint) => {
     navigate(`/manage-complaint?id=${complaint.id}`, { state: { complaint } });
@@ -107,6 +87,14 @@ const ViewComplains = () => {
         </div>
 
         <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          {loading && (
+            <div className="p-8 text-center text-slate-600">Loading complaints...</div>
+          )}
+
+          {error && !loading && (
+            <div className="p-6 text-center text-red-700 bg-red-50 border-b border-red-100">{error}</div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse text-left">
               <thead className="bg-slate-50 text-sm text-slate-500">

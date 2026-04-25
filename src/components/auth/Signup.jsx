@@ -12,6 +12,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
+import { loginUser, registerUser, setStoredToken, setStoredUser } from "../../lib/api";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -26,38 +27,34 @@ const Signup = () => {
     securityCode: "",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const getRequiredFields = () => {
-    return role === "authority"
-      ? ["name", "email", "contact", "securityCode", "password"]
-      : ["name", "email", "contact", "ward", "password"];
-  };
-
   const validateForm = () => {
-    const requiredFields = getRequiredFields();
-
     if (!formData.name) return "Please tell us your name.";
     if (!formData.email) return "Please provide an email address.";
     if (!formData.password)
       return "Please set a password to secure your account.";
     if (!formData.contact) return "Please provide a contact number.";
+    if (!formData.ward) {
+      return "Please select your ward.";
+    }
+    if (formData.ward === "6" && !(formData.wardOther || "").trim()) {
+      return "Please specify your ward.";
+    }
 
     if (role === "authority" && !formData.securityCode) {
       return "Please provide a security code.";
-    }
-    if (role === "citizen" && !formData.ward) {
-      return "Please select your ward.";
     }
 
     return null;
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -66,21 +63,45 @@ const Signup = () => {
       return setError(validationError);
     }
 
-    const userData = {
+    const payload = {
       name: formData.name,
       email: formData.email,
       contact: formData.contact,
       password: formData.password,
+      ward_no: formData.ward === "6" ? formData.wardOther?.trim() : formData.ward,
       role,
-      ...(role === "citizen" && { ward: formData.ward }),
-      ...(role === "authority" && { securityCode: formData.securityCode }),
+      security_code: role === "authority" ? formData.securityCode : undefined,
     };
 
-    console.log("Form Data:", userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+    try {
+      setLoading(true);
+      await registerUser(payload);
 
-    const path = role === "citizen" ? "report-issue" : "manage-complaints";
-    navigate(`/dashboard/${path}`, { state: { role } });
+      // Auto-login after successful register for a smooth flow.
+      const loginResponse = await loginUser({ email: formData.email, password: formData.password });
+      const token = loginResponse?.session?.access_token;
+      const user = loginResponse?.user;
+
+      if (!token || !user) {
+        navigate("/login", { state: { message: "Registration successful. Please sign in." }, replace: true });
+        return;
+      }
+
+      setStoredToken(token);
+      // Ensure stored user contains explicit role/ward fields so UI can read them reliably
+      const normalizedUser = {
+        ...user,
+        role,
+        ward_no: user?.ward_no || user?.user_metadata?.ward_no || payload.ward_no,
+      };
+      setStoredUser(normalizedUser);
+      const nextRole = role;
+      navigate(nextRole === "authority" ? "/view-complaints" : "/report-issue", { replace: true });
+    } catch (err) {
+      setError(err?.payload?.error || err?.message || "Unable to create account.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -224,59 +245,58 @@ const Signup = () => {
               </div>
             )}
 
-            {/* Citizen: Ward Field */}
-            {role === "citizen" && (
-              <div className="group animate-in fade-in slide-in-from-top-4 duration-300">
-                <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">
-                  Ward number
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-3.5 text-slate-400 pointer-events-none">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <select
-                    name="ward"
-                    value={formData.ward}
-                    onChange={handleChange}
-                    className="block w-full pl-12 pr-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 sm:text-sm appearance-none"
-                    required
-                  >
-                    <option value="">Select your ward</option>
-                    <option value="1">Ward 1</option>
-                    <option value="2">Ward 2</option>
-                    <option value="3">Ward 3</option>
-                    <option value="4">Ward 4</option>
-                    <option value="5">Ward 5</option>
-                    <option value="6">Other</option>
-                  </select>
-                  <div className="absolute right-3 top-3.5 text-slate-400 pointer-events-none">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                      />
-                    </svg>
-                  </div>
+            {/* Ward Field (required for both Citizen and Authority) */}
+            <div className="group animate-in fade-in slide-in-from-top-4 duration-300">
+              <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">
+                Ward number
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-3.5 text-slate-400 pointer-events-none">
+                  <MapPin className="w-5 h-5" />
                 </div>
-                {formData.ward === "6" && (
-                  <input
-                    type="text"
-                    name="wardOther"
-                    value={formData.wardOther || ""}
-                    onChange={handleChange}
-                    className="block w-full px-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 mt-3 sm:text-sm"
-                    placeholder="Specify your ward"
-                  />
-                )}
+                <select
+                  name="ward"
+                  value={formData.ward}
+                  onChange={handleChange}
+                  className="block w-full pl-12 pr-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 sm:text-sm appearance-none"
+                  required
+                >
+                  <option value="">Select your ward</option>
+                  <option value="1">Ward 1</option>
+                  <option value="2">Ward 2</option>
+                  <option value="3">Ward 3</option>
+                  <option value="4">Ward 4</option>
+                  <option value="5">Ward 5</option>
+                  <option value="6">Other</option>
+                </select>
+                <div className="absolute right-3 top-3.5 text-slate-400 pointer-events-none">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                    />
+                  </svg>
+                </div>
               </div>
-            )}
+              {formData.ward === "6" && (
+                <input
+                  type="text"
+                  name="wardOther"
+                  value={formData.wardOther || ""}
+                  onChange={handleChange}
+                  className="block w-full px-4 py-3 text-slate-900 bg-white rounded-lg border border-slate-300 shadow-sm ring-0 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200 mt-3 sm:text-sm"
+                  placeholder="Specify your ward"
+                  required
+                />
+              )}
+            </div>
 
             {/* Password Field */}
             <div className="group">
@@ -306,9 +326,10 @@ const Signup = () => {
             <div className="flex justify-center">
               <button
                 type="submit"
+                disabled={loading}
                 className="w-full lg:w-[50%] mt-8 flex justify-center items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-3.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all duration-300 cursor-pointer active:scale-95"
               >
-                Create account <ArrowRight className="w-4 h-4" />
+                {loading ? "Creating account..." : <>Create account <ArrowRight className="w-4 h-4" /></>}
               </button>
             </div>
             <p className="mt-4 text-center text-sm text-slate-600">

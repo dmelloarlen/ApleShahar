@@ -1,8 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './components/Landing';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
-import Dashboard from './components/authorities/Dashboard';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -10,6 +9,29 @@ import ViewComplains from './components/ViewComplains';
 import ManageComplain from './components/ManageComplain';
 import ViewFacilityRequests from './components/authorities/ViewFacilityRequests';
 import ReportComplainDetails from './components/ReportComplainDetails';
+import { getStoredToken, getStoredUser, getUserRole } from './lib/api';
+
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const token = getStoredToken();
+  const user = getStoredUser();
+  const role = getUserRole(user);
+
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+    const fallback = role === 'authority' ? '/view-complaints' : '/report-issue';
+    return <Navigate to={fallback} replace />;
+  }
+
+  return children;
+};
+
+const DashboardRedirect = () => {
+  const role = getUserRole(getStoredUser());
+  return <Navigate to={role === 'authority' ? '/view-complaints' : '/report-issue'} replace />;
+};
 
 function App() {
 
@@ -23,11 +45,39 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             
-            <Route path="/dashboard" element={<Dashboard />}/>
-            <Route path="/view-complaints" element={<ViewComplains />} />
-            <Route path="/manage-complaint" element={<ManageComplain />} />
-            <Route path="/facility-requests" element={<ViewFacilityRequests />} />
-            <Route path="/report-issue" element={<ReportComplainDetails />} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardRedirect /></ProtectedRoute>} />
+            <Route
+              path="/view-complaints"
+              element={
+                <ProtectedRoute allowedRoles={['citizen', 'authority']}>
+                  <ViewComplains />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manage-complaint"
+              element={
+                <ProtectedRoute allowedRoles={['citizen', 'authority']}>
+                  <ManageComplain />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/facility-requests"
+              element={
+                <ProtectedRoute allowedRoles={['citizen', 'authority']}>
+                  <ViewFacilityRequests />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/report-issue"
+              element={
+                <ProtectedRoute allowedRoles={['citizen']}>
+                  <ReportComplainDetails />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </div>
         <Footer />

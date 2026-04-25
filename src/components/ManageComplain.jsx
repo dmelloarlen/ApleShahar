@@ -1,49 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
-
-const STORAGE_KEY = 'complaintsData';
-
-const loadStoredComplaints = () => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return null;
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return null;
-  }
-};
-
-const saveStoredComplaints = (complaints) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(complaints));
-};
+import { getStoredUser, getUserRole, resolveComplaint, updateComplaintStatus } from '../lib/api';
 
 const sampleImage = 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=900&q=80';
 
 export default function ManageComplain() {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') || 'null');
-    } catch {
-      return null;
-    }
-  }, []);
+  const user = useMemo(() => getStoredUser(), []);
 
-  const isCitizen = user?.role === 'citizen';
+  const isCitizen = getUserRole(user) === 'citizen';
   const [complaint, setComplaint] = useState(null);
   const [contractorName, setContractorName] = useState('');
   const [status, setStatus] = useState('Just Reported');
   const [resolvedDescription, setResolvedDescription] = useState('');
   const [resolvedPhoto, setResolvedPhoto] = useState(null);
   const [savedMessage, setSavedMessage] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const stateComplaint = location.state?.complaint;
-    const queryId = new URLSearchParams(location.search).get('id');
-    const stored = loadStoredComplaints();
-
     if (stateComplaint) {
       setComplaint(stateComplaint);
       setContractorName(stateComplaint.contractor || '');
@@ -51,27 +29,6 @@ export default function ManageComplain() {
       setResolvedDescription(stateComplaint.resolvedDescription || '');
       setResolvedPhoto(stateComplaint.resolvedPhoto || null);
       return;
-    }
-
-    if (stored && queryId) {
-      const found = stored.find((item) => item.id === queryId);
-      if (found) {
-        setComplaint(found);
-        setContractorName(found.contractor || '');
-        setStatus(found.status || 'Just Reported');
-        setResolvedDescription(found.resolvedDescription || '');
-        setResolvedPhoto(found.resolvedPhoto || null);
-        return;
-      }
-    }
-
-    if (stored && stored.length > 0) {
-      const fallback = stored[0];
-      setComplaint(fallback);
-      setContractorName(fallback.contractor || '');
-      setStatus(fallback.status || 'Just Reported');
-      setResolvedDescription(fallback.resolvedDescription || '');
-      setResolvedPhoto(fallback.resolvedPhoto || null);
     }
   }, [location.state, location.search]);
 
@@ -83,39 +40,43 @@ export default function ManageComplain() {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = (event) => {
+  const handleSave = async (event) => {
     event.preventDefault();
     if (!complaint) return;
+    setSavedMessage('');
+    setError('');
 
-    const updates = {
-      contractor: contractorName || complaint.contractor,
-      status,
-      resolvedDescription,
-      resolvedPhoto
-    };
+    const complaintId = complaint.id || complaint.raw?.id || complaint.raw?.complaint_id;
+    if (!complaintId) {
+      setError('Complaint id is missing.');
+      return;
+    }
 
-    const complaints = loadStoredComplaints() || [];
-    const updatedList = complaints.map((item) =>
-      item.id === complaint.id ? { ...item, ...updates } : item
-    );
+    try {
+      setSaving(true);
+      await updateComplaintStatus(complaintId, status);
 
-    saveStoredComplaints(updatedList);
-    setComplaint((prev) => (prev ? { ...prev, ...updates } : prev));
-    setSavedMessage('Changes saved successfully.');
-  };
+      if (status.toLowerCase() === 'fixed' || resolvedDescription || resolvedPhoto) {
+        await resolveComplaint(complaintId, {
+          resolved_description: resolvedDescription,
+          resolved_photo: resolvedPhoto,
+          contractor: contractorName,
+        });
+      }
 
-  const handleCitizenAction = (action) => {
-    if (!complaint) return;
-    const nextStatus = action === 'resolve' ? 'Satisfied' : action === 'revoke' ? 'Revoked' : 'Reopened';
-    const complaints = loadStoredComplaints() || [];
-    const updatedList = complaints.map((item) =>
-      item.id === complaint.id ? { ...item, status: nextStatus } : item
-    );
-
-    saveStoredComplaints(updatedList);
-    setComplaint((prev) => (prev ? { ...prev, status: nextStatus } : prev));
-    setStatus(nextStatus);
-    setSavedMessage(`Complaint marked ${nextStatus}.`);
+      const updates = {
+        contractor: contractorName || complaint.contractor,
+        status,
+        resolvedDescription,
+        resolvedPhoto,
+      };
+      setComplaint((prev) => (prev ? { ...prev, ...updates } : prev));
+      setSavedMessage('Changes saved successfully.');
+    } catch (err) {
+      setError(err?.payload?.error || err?.message || 'Failed to save complaint update.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!complaint) {
@@ -126,7 +87,7 @@ export default function ManageComplain() {
           <p className="mt-3 text-sm text-slate-500">Select a report from the list to manage it.</p>
           <button
             type="button"
-            onClick={() => navigate('/manage-complaints')}
+            onClick={() => navigate('/view-complaints')}
             className="mt-8 inline-flex items-center gap-2 rounded-3xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
             <ArrowLeft className="h-4 w-4" /> Back to reports
@@ -147,7 +108,7 @@ export default function ManageComplain() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/manage-complaints')}
+            onClick={() => navigate('/view-complaints')}
             className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
           >
             <ArrowLeft className="h-4 w-4" /> Back to all reports
@@ -238,14 +199,13 @@ export default function ManageComplain() {
                 <div className="mt-5 rounded-3xl bg-emerald-50 p-4 text-sm text-emerald-700">{savedMessage}</div>
               )}
 
+              {error && (
+                <div className="mt-5 rounded-3xl bg-red-50 p-4 text-sm text-red-700">{error}</div>
+              )}
+
               {isCitizen ? (
                 <div className="mt-6 space-y-4">
-                  <p className="text-sm leading-6 text-slate-600">As a citizen, you can signal satisfaction, request escalation, or revoke the report.</p>
-                  <div className="grid gap-3 sm:grid-cols-1">
-                    <button type="button" onClick={() => handleCitizenAction('resolve')} className="w-full rounded-3xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Mark Satisfied</button>
-                    <button type="button" onClick={() => handleCitizenAction('reopen')} className="w-full rounded-3xl bg-slate-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-600">Re-open Request</button>
-                    <button type="button" onClick={() => handleCitizenAction('revoke')} className="w-full rounded-3xl bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-700">Revoke Request</button>
-                  </div>
+                  <p className="text-sm leading-6 text-slate-600">Citizen view is read-only. Status updates are handled by authorities.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSave} className="mt-6 space-y-6">
@@ -280,7 +240,7 @@ export default function ManageComplain() {
                       )}
                     </div>
                   </div>
-                  <button type="submit" className="w-full rounded-3xl bg-slate-900 px-6 py-4 text-sm font-semibold text-white transition hover:bg-slate-800">Save changes</button>
+                  <button type="submit" disabled={saving} className="w-full rounded-3xl bg-slate-900 px-6 py-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">{saving ? 'Saving...' : 'Save changes'}</button>
                 </form>
               )}
             </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Building2, PlusCircle, HeartHandshake, Leaf, ArrowRight, LogOut, Home, Menu, X } from 'lucide-react';
 import logo from '../assets/logo.png';
+import { clearSession, getUserRole } from '../lib/api';
 
 const Navbar = () => {
   const location = useLocation();
@@ -28,7 +29,7 @@ const Navbar = () => {
 
   const renderDashboardLinks = () => {
     if (!user) return null;
-    if (user.role === 'citizen') {
+    if (getUserRole(user) === 'citizen') {
       return (
         <>
           <Link to="/report-issue" className={navItemClass('report-issue')}>
@@ -45,10 +46,10 @@ const Navbar = () => {
     } else {
       return (
         <>
-          <Link to="/dashboard/manage-complaints" className={navItemClass('manage-complaints')}>
+          <Link to="/view-complaints" className={navItemClass('view-complaints')}>
             <HeartHandshake className="w-4 h-4" /> Help Neighbors
           </Link>
-          <Link to="/dashboard/facility-requests" className={navItemClass('facility-requests')}>
+          <Link to="/facility-requests" className={navItemClass('facility-requests')}>
             <Leaf className="w-4 h-4" /> Grow the City
           </Link>
         </>
@@ -57,9 +58,9 @@ const Navbar = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    clearSession();
     setUser(null);
-    navigate('/');
+    navigate('/login');
     setMobileMenuOpen(false);
   };
 
@@ -114,7 +115,7 @@ const Navbar = () => {
                 {/* User Info - Desktop */}
                 <div className="hidden md:flex flex-col items-end pr-4 border-r border-slate-200">
                   <span className="text-sm font-semibold text-slate-900">{user.name}</span>
-                  <span className="text-xs text-slate-500">{user.role === 'authority' ? 'Authority' : 'Citizen'}</span>
+                  <span className="text-xs text-slate-500">{getUserRole(user) === 'authority' ? 'Authority' : 'Citizen'}</span>
                 </div>
 
                 {/* Logout Button */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Building2, ArrowRight, Mail, Lock, AlertCircle } from 'lucide-react';
+import { ArrowRight, Mail, Lock, AlertCircle } from 'lucide-react';
+import { getUserRole, loginUser, setStoredToken, setStoredUser } from '../../lib/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const Login = () => {
     password: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,7 +24,7 @@ const Login = () => {
     return null;
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -31,26 +33,35 @@ const Login = () => {
       return setError(validationError);
     }
 
-    const userData = {
-      email: formData.email,
-      password: formData.password,
-    };
+    try {
+      setLoading(true);
+      const response = await loginUser({
+        email: formData.email,
+        password: formData.password,
+      });
 
-    console.log('Login Data:', userData);
-    
-    // Auto-detect role based on email
-    const detectedRole = formData.email.includes('guide') || formData.email.includes('admin') ? 'authority' : 'citizen';
-    localStorage.setItem('user', JSON.stringify({ name: formData.email.split('@')[0], role: detectedRole, email: formData.email }));
+      const token = response?.session?.access_token;
+      const user = response?.user;
 
-    const path = detectedRole === 'citizen' ? 'report-issue' : 'manage-complaints';
-    navigate(`/dashboard/${path}`, { state: { role: detectedRole } });
-  };
+      if (!token || !user) {
+        throw new Error('Invalid login response from server.');
+      }
 
-  const autofill = () => {
-    setFormData({
-      email: 'neighbor@apleshahar.in',
-      password: 'password',
-    });
+      setStoredToken(token);
+      const role = getUserRole(user);
+      const normalizedUser = {
+        ...user,
+        role,
+        ward_no: user?.ward_no || user?.user_metadata?.ward_no || user?.ward || null,
+      };
+      setStoredUser(normalizedUser);
+
+      navigate(role === 'authority' ? '/view-complaints' : '/report-issue', { replace: true });
+    } catch (err) {
+      setError(err?.payload?.error || err?.message || 'Unable to login.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -111,23 +122,13 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Demo credentials link */}
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={autofill}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
-              >
-                Use demo credentials
-              </button>
-            </div>
-
             {/* Submit Button */}
             <button
               type="submit"
+              disabled={loading}
               className="w-full mt-8 flex justify-center items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-3.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all duration-300 cursor-pointer active:scale-95"
             >
-              Sign in <ArrowRight className="w-4 h-4" />
+              {loading ? 'Signing in...' : <>Sign in <ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
 
@@ -142,6 +143,9 @@ const Login = () => {
             Create one
           </Link>
         </p>
+        {location.state?.message && (
+          <p className="mt-3 text-center text-sm text-emerald-700">{location.state.message}</p>
+        )}
         </div>
       </div>
     </div>

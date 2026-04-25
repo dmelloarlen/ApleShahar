@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Leaf, MapPin, Camera, Navigation, X } from 'lucide-react';
+import { getStoredUser, submitComplaint } from '../lib/api';
 
 // Fix for default leaflet marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -61,6 +62,8 @@ const setWardAndPosition = (wardId, setSelectedWard, setMapCenter, setPosition) 
 };
 
 const ReportComplainDetails = () => {
+  const user = getStoredUser();
+
   // State
   const [formData, setFormData] = useState({
     title: '',
@@ -71,6 +74,9 @@ const ReportComplainDetails = () => {
     mapCenter: DEFAULT_CENTER,
     isAutoDetecting: false
   });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -178,42 +184,39 @@ const ReportComplainDetails = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
     if (!validateForm()) return;
 
     const wardName = WARDS.find(w => w.id === formData.selectedWard)?.name || 'Unknown';
-    const complaintData = {
+    const complaintPayload = {
       title: formData.title.trim(),
       description: formData.description.trim(),
+      ward_no: formData.selectedWard,
       ward: formData.selectedWard,
-      wardName,
       location: {
         latitude: formData.position.lat,
         longitude: formData.position.lng,
-        coordinates: [formData.position.lat, formData.position.lng]
       },
-      photo: formData.photo ? {
-        hasPhoto: true,
-        dataUrl: formData.photo,
-        size: formData.photo.length
-      } : { hasPhoto: false },
-      timestamp: new Date().toISOString(),
-      submittedAt: new Date().toLocaleString(),
-      userAgent: navigator.userAgent,
-      platform: navigator.platform
+      latitude: formData.position.lat,
+      longitude: formData.position.lng,
+      photo: formData.photo || null,
+      ward_name: wardName,
+      contact: user?.contact || user?.user_metadata?.contact || null,
     };
 
-    console.log('=== COMPLAINT FORM DATA ===');
-    console.log('Title:', complaintData.title);
-    console.log('Description:', complaintData.description);
-    console.log('Ward:', complaintData.ward, '-', complaintData.wardName);
-    console.log('Location:', complaintData.location);
-    console.log('Photo:', complaintData.photo.hasPhoto ? `Yes (${complaintData.photo.size} chars)` : 'No');
-    console.log('Timestamp:', complaintData.timestamp);
-    console.log('Full Data Object:', complaintData);
-    console.log('===========================');
-
-    alert('Thank you! Your complaint has been submitted successfully.');
-    resetForm();
+    setSubmitting(true);
+    submitComplaint(complaintPayload)
+      .then(() => {
+        setSuccess('Complaint submitted successfully.');
+        resetForm();
+      })
+      .catch((err) => {
+        setError(err?.payload?.error || err?.message || 'Unable to submit complaint.');
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
   };
 
   return (
@@ -232,6 +235,18 @@ const ReportComplainDetails = () => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
           <div className="p-6 md:p-8 space-y-6">
+
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {success}
+              </div>
+            )}
 
             {/* Title Field */}
             <div>
@@ -389,9 +404,10 @@ const ReportComplainDetails = () => {
             {/* Submit Button */}
             <button
               type="submit"
+              disabled={submitting}
               className="w-full bg-emerald-600 text-white font-semibold text-lg py-4 rounded-xl hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-200 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
             >
-              Submit Complaint
+              {submitting ? 'Submitting...' : 'Submit Complaint'}
             </button>
           </div>
         </form>

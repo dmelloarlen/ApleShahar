@@ -42,7 +42,7 @@ const Landing = () => {
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4 mb-12">
               <Link 
-                to={user ? (user.role === 'citizen' ? '/dashboard/report-issue' : '/dashboard/manage-complaints') : '/signup'}
+                to={user ? (user.role === 'citizen' ? '/report-issue' : '/view-complaints') : '/signup'}
                 className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex justify-center items-center gap-2"
               >
                 Start Contributing <ArrowRight className="w-4 h-4" />

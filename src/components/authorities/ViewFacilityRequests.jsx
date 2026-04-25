@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import FacilityRequestDetails from '../FacilityRequestDetails';
 import { Leaf } from 'lucide-react';
+import { getStoredUser, getUserRole } from '../../lib/api';
 
 const ViewFacilityRequests = () => {
+  const isAuthority = getUserRole(getStoredUser()) === 'authority';
   const [requests, setRequests] = useState([
     { id: 'REQ-01', type: 'park', description: 'New Public Park needed in Kothrud due to lack of green spaces.', location: 'Kothrud', status: 'Accepted', date: '2023-10-20' },
     { id: 'REQ-02', type: 'streetlight', description: 'Streetlights needed on Baner Pashan Link Road to make it safer for night walks.', location: 'Baner', status: 'Pending', date: '2023-10-21' }
@@ -29,7 +31,11 @@ const ViewFacilityRequests = () => {
         <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600"><Leaf className="w-6 h-6"/></div>
         <div>
           <h2 className="text-3xl font-black text-stone-800 tracking-tight">Grow the City</h2>
-          <p className="text-stone-500 font-medium text-sm mt-1">Review community dreams and help bring them to life.</p>
+          <p className="text-stone-500 font-medium text-sm mt-1">
+            {isAuthority
+              ? 'Review community dreams and help bring them to life.'
+              : 'Browse submitted facility requests from your community.'}
+          </p>
         </div>
       </div>
 
@@ -60,15 +66,19 @@ const ViewFacilityRequests = () => {
                     </span>
                   </td>
                   <td className="p-5 text-right">
-                    <button 
-                      onClick={() => {
-                        setSelectedRequest(r);
-                        setReason(r.reason || '');
-                      }}
-                      className="bg-stone-100 text-stone-600 hover:bg-emerald-50 hover:text-emerald-600 font-bold text-sm px-4 py-2 rounded-xl transition-all"
-                    >
-                      Read More
-                    </button>
+                    {isAuthority ? (
+                      <button 
+                        onClick={() => {
+                          setSelectedRequest(r);
+                          setReason(r.reason || '');
+                        }}
+                        className="bg-stone-100 text-stone-600 hover:bg-emerald-50 hover:text-emerald-600 font-bold text-sm px-4 py-2 rounded-xl transition-all"
+                      >
+                        Read More
+                      </button>
+                    ) : (
+                      <span className="text-xs font-semibold text-stone-400">Read-only</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -80,14 +90,16 @@ const ViewFacilityRequests = () => {
         </div>
       </div>
 
-      <FacilityRequestDetails 
-        selectedRequest={selectedRequest}
-        setSelectedRequest={setSelectedRequest}
-        reason={reason}
-        setReason={setReason}
-        setActionType={setActionType}
-        handleAction={handleAction}
-      />
+      {isAuthority && (
+        <FacilityRequestDetails 
+          selectedRequest={selectedRequest}
+          setSelectedRequest={setSelectedRequest}
+          reason={reason}
+          setReason={setReason}
+          setActionType={setActionType}
+          handleAction={handleAction}
+        />
+      )}
     </div>
   );
 };
