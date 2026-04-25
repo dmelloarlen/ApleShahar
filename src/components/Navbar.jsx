@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Building2, PlusCircle, HeartHandshake, Leaf, ArrowRight, LogOut, Home, Menu, X } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 const Navbar = () => {
   const location = useLocation();
@@ -31,13 +32,13 @@ const Navbar = () => {
       return (
         <>
           <Link to="/report-issue" className={navItemClass('report-issue')}>
-            <PlusCircle className="w-4 h-4" /> Report Issue
+            Report Issue
           </Link>
           <Link to="/view-complaints" className={navItemClass('view-complaints')}>
-            <HeartHandshake className="w-4 h-4" /> My Complaints
+             My Complaints
           </Link>
           <Link to="/facility-requests" className={navItemClass('facility-requests')}>
-            <Leaf className="w-4 h-4" /> Facility Requests
+             Facility Requests
           </Link>
         </>
       );
@@ -67,11 +68,11 @@ const Navbar = () => {
       <nav className="sticky top-0 z-50 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity flex-shrink-0">
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-2 rounded-lg">
-              <Building2 className="text-white w-5 h-5" />
+          <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity flex-shrink-0">
+            <div className="h-10 w-10 sm:h-11 sm:w-11 bg-gradient-to-br rounded-xl p-1.5 shadow-sm ring-1 ring-indigo-200/70 flex items-center justify-center overflow-hidden">
+              <img src={logo} alt="ApleShahar logo" className="h-full w-full object-contain" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent hidden sm:inline-block">ApleShahar</span>
+            <span className="text-lg sm:text-xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent hidden sm:inline-block">ApleShahar</span>
           </Link>
 
           {/* Desktop Navigation Links */}

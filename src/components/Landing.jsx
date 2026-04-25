@@ -33,13 +33,7 @@ const Landing = () => {
       <section className="max-w-7xl mx-auto px-6 lg:px-8 pt-32 pb-32">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold mb-6">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-              </span>
-              Trusted by 50K+ citizens
-            </div>
+           
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 leading-[1.15] mb-6">
               Your voice shapes our city
             </h1>
@@ -82,7 +76,7 @@ const Landing = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent"></div>
             <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur p-4 rounded-xl shadow-lg border border-white/50">
               <div className="flex items-center gap-3">
-                <div className="bg-green-100 p-2 rounded-lg"><CheckCircle className="w-5 h-5 text-green-600"/></div>
+              
                 <div>
                   <p className="text-sm font-bold text-slate-900">Last week: 156 issues resolved</p>
                   <p className="text-xs text-slate-500">In 14 wards across the city</p>
@@ -146,27 +140,21 @@ const Landing = () => {
             <p className="text-lg text-slate-600 mb-8">Our community is driving tangible changes across the city. Here's the proof:</p>
             <div className="space-y-6">
               <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <Zap className="w-6 h-6 text-indigo-600" />
-                </div>
+              
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">48,000+ Issues Resolved</h4>
                   <p className="text-slate-600 text-sm">Across all sectors - roads, utilities, sanitation, and more</p>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <Users className="w-6 h-6 text-indigo-600" />
-                </div>
+                
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">50,000+ Active Citizens</h4>
                   <p className="text-slate-600 text-sm">Contributing daily to make the city better</p>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <Clock className="w-6 h-6 text-indigo-600" />
-                </div>
+                
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">Avg 72 Hour Response</h4>
                   <p className="text-slate-600 text-sm">Authority teams are committed to quick turnaround</p>
@@ -264,9 +252,7 @@ const Landing = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {facilities.map((f) => (
             <div key={f.id} className="group border border-slate-200 hover:border-indigo-200 rounded-xl p-6 transition-all hover:shadow-lg bg-white">
-              <div className="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center mb-4 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
-                <Leaf className="w-6 h-6" />
-              </div>
+              
               <h4 className="font-bold text-lg text-slate-900 mb-2 capitalize">{f.type} in {f.location}</h4>
               <p className="text-sm text-slate-600 mb-4 leading-relaxed">{f.description}</p>
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">

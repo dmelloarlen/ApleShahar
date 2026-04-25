@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Building2, Mail, Phone, MapPin } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -11,16 +12,16 @@ export default function Footer() {
   if (isAuthPage) return null;
 
   return (
-    <footer className="border-t border-slate-200 bg-slate-500 mt-20 ">
+    <footer className="border-t border-slate-200 bg-[#F1F5F9] mt-20 ">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16 ">
         {/* Footer Content Grid */}
         <div className="hidden lg:block grid grid-cols-1 md:grid-cols-5 gap-12 mb-12">
           {/* Brand Section */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2.5 mb-6 hover:opacity-80 transition-opacity">
-              <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-2 rounded-lg">
-                <Building2 className="text-white w-5 h-5" />
-              </div>
+                <div className="h-10 w-10 sm:h-11 sm:w-11 bg-gradient-to-br rounded-xl p-1.5 shadow-sm ring-1 ring-indigo-200/70 flex items-center justify-center overflow-hidden">
+                      <img src={logo} alt="ApleShahar logo" className="h-full w-full object-contain" />
+                   </div>
               <span className="text-lg font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">ApleShahar</span>
             </Link>
             <p className="text-sm leading-relaxed mb-6">
@@ -76,13 +77,13 @@ export default function Footer() {
 
         {/* Bottom Section */}
         <div className="border-t border-slate-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-sm text-white">
+          <p className="text-sm text-black">
             © {currentYear} ApleShahar. All rights reserved. Made with ❤️ for our community.
           </p>
           <div className="flex gap-8 text-sm">
-            <a href="#" className="text-white hover:text-indigo-600 transition-colors font-medium">Status</a>
-            <a href="#" className="text-white hover:text-indigo-600 transition-colors font-medium">Sitemap</a>
-            <a href="#" className="text-white hover:text-indigo-600 transition-colors font-medium">Accessibility</a>
+            <a href="#" className="text-black hover:text-indigo-600 transition-colors font-medium">Status</a>
+            <a href="#" className="text-black hover:text-indigo-600 transition-colors font-medium">Sitemap</a>
+            <a href="#" className="text-black hover:text-indigo-600 transition-colors font-medium">Accessibility</a>
           </div>
         </div>
       </div>
