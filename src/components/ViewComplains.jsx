@@ -9,40 +9,33 @@ import {
   handleApiError,
 } from "../lib/api";
 
-// Maps backend status strings to Tailwind classes
 const statusStyles = {
-  pending:     "bg-amber-50 text-amber-600 border-amber-100",
+  pending: "bg-amber-50 text-amber-600 border-amber-100",
   in_progress: "bg-sky-50 text-sky-600 border-sky-100",
-  resolved:    "bg-emerald-50 text-emerald-600 border-emerald-100",
-  rejected:    "bg-rose-50 text-rose-600 border-rose-100",
-  // Legacy / fallback labels
+  resolved: "bg-violet-50 text-violet-600 border-violet-100",
+  closed: "bg-emerald-50 text-emerald-600 border-emerald-100",
+  rejected: "bg-rose-50 text-rose-600 border-rose-100",
   "Just Reported": "bg-slate-50 text-slate-600 border-slate-100",
-  Helping:         "bg-amber-50 text-amber-600 border-amber-100",
-  Fixed:           "bg-emerald-50 text-emerald-600 border-emerald-100",
-  Satisfied:       "bg-sky-50 text-sky-600 border-sky-100",
-  Revoked:         "bg-rose-50 text-rose-600 border-rose-100",
-  Reopened:        "bg-violet-50 text-violet-600 border-violet-100",
+  Helping: "bg-amber-50 text-amber-600 border-amber-100",
+  Fixed: "bg-emerald-50 text-emerald-600 border-emerald-100",
+  Satisfied: "bg-sky-50 text-sky-600 border-sky-100",
+  Revoked: "bg-rose-50 text-rose-600 border-rose-100",
+  Reopened: "bg-orange-50 text-orange-600 border-orange-100",
 };
 
 const STATUS_LABELS = {
-  pending:     "Pending",
+  pending: "Pending",
   in_progress: "In Progress",
-  resolved:    "Resolved",
-  rejected:    "Rejected",
+  resolved: "Resolved — Awaiting Your Review",
+  closed: "Closed",
+  rejected: "Rejected",
 };
 
-/**
- * Normalize a complaint object from the backend into a consistent UI shape.
- * Backend returns: complaint_id, prob_description, issue_type, ward,
- *   location_coords, status, image_link, created_at, resolve_description,
- *   resolve_image, citizen_id
- */
 const toUiComplaint = (item) => {
   const id = String(
     item?.complaint_id || item?.id || item?._id || "N/A"
   );
 
-  // Title: prefer issue_type as a short label, fall back to description snippet
   const issueType = item?.issue_type || item?.type || "";
   const description = item?.prob_description || item?.description || item?.details || "";
   const title = issueType
@@ -52,7 +45,6 @@ const toUiComplaint = (item) => {
   const rawStatus = item?.status || "pending";
   const status = STATUS_LABELS[rawStatus] || rawStatus;
 
-  // Location: backend stores location_coords as "lat,lng" string or object
   let location = "-";
   if (item?.location_name) {
     location = item.location_name;
@@ -92,6 +84,7 @@ const ViewComplains = () => {
 
   const user = useMemo(() => getStoredUser(), []);
   const isCitizen = getUserRole(user) === "citizen";
+  const wardNo = user?.ward_no || user?.user_metadata?.ward_no;
 
   const filteredComplaints = complaints.filter(
     (c) =>
@@ -109,14 +102,14 @@ const ViewComplains = () => {
 
         const data = isCitizen
           ? await getMyComplaints()
-          : await getWardComplaints(user?.ward_no || user?.user_metadata?.ward_no);
+          : await getWardComplaints(wardNo);
 
         // Backend returns { success: true, complaints: [...] }
         const list = Array.isArray(data)
           ? data
           : Array.isArray(data?.complaints)
-          ? data.complaints
-          : [];
+            ? data.complaints
+            : [];
 
         setComplaints(list.map(toUiComplaint));
       } catch (err) {
@@ -127,7 +120,7 @@ const ViewComplains = () => {
     };
 
     load();
-  }, [isCitizen, user, navigate]);
+  }, [isCitizen, wardNo, navigate]);
 
   const openComplaint = (complaint) => {
     navigate(`/manage-complaint?id=${complaint.id}`, { state: { complaint } });
@@ -195,11 +188,10 @@ const ViewComplains = () => {
                       <td className="px-5 py-4 text-sm text-slate-500">{complaint.ward}</td>
                       <td className="px-5 py-4">
                         <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${
-                            statusStyles[complaint.rawStatus] ||
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusStyles[complaint.rawStatus] ||
                             statusStyles[complaint.status] ||
                             "bg-slate-50 text-slate-600 border-slate-200"
-                          }`}
+                            }`}
                         >
                           {complaint.status}
                         </span>
@@ -208,7 +200,7 @@ const ViewComplains = () => {
                         <button
                           type="button"
                           onClick={() => openComplaint(complaint)}
-                          className="rounded-2xl bg-amber-500 px-4 py-2 text-sm font-semibold text-stone-900 shadow-sm shadow-amber-200 transition hover:bg-amber-600"
+                          className="rounded-2xl bg-[#d5b153] px-4 py-2 text-sm font-semibold text-stone-900 shadow-sm shadow-amber-200 transition hover:bg-[#d59e3c] cursor-pointer"
                         >
                           {isCitizen ? "View" : "Assist"}
                         </button>
@@ -227,8 +219,8 @@ const ViewComplains = () => {
                     {searchTerm
                       ? "Try a different keyword or clear the search filter."
                       : isCitizen
-                      ? "You haven't submitted any complaints yet."
-                      : "No complaints have been filed in your ward yet."}
+                        ? "You haven't submitted any complaints yet."
+                        : "No complaints have been filed in your ward yet."}
                   </p>
                 </div>
               )}

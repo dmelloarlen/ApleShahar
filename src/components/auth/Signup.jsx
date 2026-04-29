@@ -24,11 +24,11 @@ const Signup = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name)        return "Please tell us your name.";
-    if (!formData.email)       return "Please provide an email address.";
-    if (!formData.password)    return "Please set a password to secure your account.";
-    if (!formData.contact)     return "Please provide a contact number.";
-    if (!formData.ward)        return "Please select your ward.";
+    if (!formData.name) return "Please tell us your name.";
+    if (!formData.email) return "Please provide an email address.";
+    if (!formData.password) return "Please set a password to secure your account.";
+    if (!formData.contact) return "Please provide a contact number.";
+    if (!formData.ward) return "Please select your ward.";
     if (role === "authority" && !formData.securityCode) return "Please provide a security code.";
     return null;
   };
@@ -49,7 +49,7 @@ const Signup = () => {
       role,
       security_code: role === "authority" ? formData.securityCode : undefined,
     };
-
+    console.log(payload);
     try {
       setLoading(true);
       await registerUser(payload);
@@ -66,18 +66,17 @@ const Signup = () => {
 
       setStoredToken(token);
 
-      // Fetch real DB profile (role + ward_no from users table, not JWT)
       let dbProfile = null;
       try {
         const meRes = await fetchMe();
         dbProfile = meRes?.user ?? null;
-      } catch (_) {}
+      } catch (_) { }
 
       const mergedUser = {
         ...authUser,
-        role:    dbProfile?.role    ?? role,
+        role: dbProfile?.role ?? role,
         ward_no: dbProfile?.ward_no ?? formData.ward,
-        name:    dbProfile?.name    ?? formData.name,
+        name: dbProfile?.name ?? formData.name,
         contact: dbProfile?.contact ?? formData.contact,
       };
       setStoredUser(mergedUser);
@@ -99,16 +98,14 @@ const Signup = () => {
       <div className="mt-10 sm:mx-auto sm:w-full relative z-10">
         <div className="bg-white/95 backdrop-blur-sm py-10 px-6 shadow-xl sm:rounded-2xl sm:px-12 border border-white/50 rounded-2xl">
 
-          {/* Role tabs */}
           <div className="mb-8">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Select your role</p>
             <div className="flex gap-3 p-1 bg-gradient-to-r from-slate-100 to-slate-50 rounded-xl">
               {["citizen", "authority"].map((r) => (
                 <button key={r} type="button"
                   onClick={() => { setRole(r); setError(""); }}
-                  className={`flex-1 flex justify-center items-center gap-2 py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                    role === r ? "bg-white text-indigo-600 shadow-md border border-indigo-100/50" : "text-slate-600 hover:text-slate-900"
-                  }`}
+                  className={`flex-1 flex justify-center items-center gap-2 py-3 text-sm font-semibold rounded-lg transition-all duration-300 ${role === r ? "bg-white text-indigo-600 shadow-md border border-indigo-100/50" : "text-slate-600 hover:text-slate-900"
+                    }`}
                 >
                   {r === "citizen" ? <User className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
                   {r.charAt(0).toUpperCase() + r.slice(1)}
@@ -125,7 +122,6 @@ const Signup = () => {
               </div>
             )}
 
-            {/* Name */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Full name</label>
               <div className="relative">
@@ -136,7 +132,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Email */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Email address</label>
               <div className="relative">
@@ -147,7 +142,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Contact */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Contact number</label>
               <div className="relative">
@@ -158,7 +152,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Ward — 29 Vasai-Virar wards */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Ward number</label>
               <div className="relative">
@@ -180,7 +173,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Authority: Security Code */}
             {role === "authority" && (
               <div className="group animate-in fade-in slide-in-from-top-4 duration-300">
                 <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Security code</label>
@@ -193,7 +185,6 @@ const Signup = () => {
               </div>
             )}
 
-            {/* Password */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Password</label>
               <div className="relative">
@@ -205,7 +196,6 @@ const Signup = () => {
               <p className="text-xs text-slate-500 mt-1.5">Use at least 8 characters</p>
             </div>
 
-            {/* Submit */}
             <div className="flex justify-center">
               <button type="submit" disabled={loading}
                 className="w-full lg:w-[50%] mt-8 flex justify-center items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-3.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-indigo-800 transition-all duration-300 cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"

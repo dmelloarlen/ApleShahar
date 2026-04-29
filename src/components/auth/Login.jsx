@@ -45,30 +45,27 @@ const Login = () => {
         throw new Error('Invalid login response from server.');
       }
 
-      // Store token first so fetchMe() can attach the Authorization header
       setStoredToken(token);
 
-      // Fetch the real DB user profile — role & ward_no live in the `users` table,
-      // NOT in the Supabase JWT, so we always need this call after login.
       let dbProfile = null;
       try {
         const meRes = await fetchMe();
         dbProfile = meRes?.user ?? null;
       } catch (_) {
-        // If fetchMe fails for any reason, fall back gracefully
+
       }
 
       const mergedUser = {
         ...authUser,
-        role:    dbProfile?.role    ?? getUserRole(authUser),
+        role: dbProfile?.role ?? getUserRole(authUser),
         ward_no: dbProfile?.ward_no ?? authUser?.user_metadata?.ward_no ?? null,
-        name:    dbProfile?.name    ?? authUser?.user_metadata?.full_name ?? '',
+        name: dbProfile?.name ?? authUser?.user_metadata?.full_name ?? '',
         contact: dbProfile?.contact ?? null,
       };
       setStoredUser(mergedUser);
 
       const role = mergedUser.role;
-      navigate(role === 'authority' ? '/view-complaints' : '/report-issue', { replace: true });
+      navigate(role === 'authority' ? '/' : '/', { replace: true });
     } catch (err) {
       setError(err?.payload?.error || err?.message || 'Unable to login.');
     } finally {
@@ -88,7 +85,6 @@ const Login = () => {
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="bg-white/95 backdrop-blur-sm py-10 px-6 shadow-xl sm:rounded-2xl sm:px-12 border border-white/50 rounded-2xl">
           <form className="space-y-5" onSubmit={handleLogin}>
-            {/* Error Alert */}
             {error && (
               <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 p-4 rounded-lg flex gap-3 animate-in fade-in slide-in-from-top">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -96,7 +92,6 @@ const Login = () => {
               </div>
             )}
 
-            {/* Email */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Email address</label>
               <div className="relative">
@@ -115,7 +110,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Password */}
             <div className="group">
               <label className="block text-sm font-semibold leading-6 text-slate-900 mb-2">Password</label>
               <div className="relative">
@@ -134,7 +128,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}

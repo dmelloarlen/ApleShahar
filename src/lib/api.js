@@ -1,11 +1,10 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+console.log('API Base URL:', API_BASE_URL);
 
 const STORAGE_KEYS = {
   token: 'token',
   user: 'user',
 };
-
-// ─── Session helpers ────────────────────────────────────────────────────────
 
 export function getStoredToken() {
   return localStorage.getItem(STORAGE_KEYS.token);
@@ -93,8 +92,6 @@ export function handleApiError(err, navigate = null) {
   return err?.payload?.error || err?.payload?.message || err?.message || 'An unexpected error occurred.';
 }
 
-// ─── HTTP helpers ────────────────────────────────────────────────────────────
-
 async function parseResponse(res) {
   const text = await res.text();
   if (!text) return null;
@@ -105,7 +102,6 @@ async function parseResponse(res) {
   }
 }
 
-/** JSON request (GET, POST with JSON body, PATCH with JSON body) */
 async function request(path, options = {}) {
   const token = getStoredToken();
   const headers = {
@@ -170,8 +166,6 @@ async function requestFormData(path, formData, method = 'POST') {
   return data;
 }
 
-// ─── Auth API ────────────────────────────────────────────────────────────────
-
 export async function registerUser(payload) {
   return request('/api/auth/register', {
     method: 'POST',
@@ -186,16 +180,9 @@ export async function loginUser({ email, password }) {
   });
 }
 
-/**
- * Fetches the full DB user profile after login.
- * The Supabase JWT does NOT include the app role/ward — those live in the users table.
- * Backend: GET /api/auth/me (requires Bearer token already set via setStoredToken)
- */
 export async function fetchMe() {
   return request('/api/auth/me');
 }
-
-// ─── Complaints API ──────────────────────────────────────────────────────────
 
 /**
  * Submit a new complaint.
@@ -207,13 +194,11 @@ export async function fetchMe() {
 export async function submitComplaint(fields, imageFile) {
   const fd = new FormData();
 
-  // Primary field names the backend expects
   fd.append('prob_description', fields.prob_description || '');
   fd.append('ward', String(fields.ward || ''));
   fd.append('location_coords', fields.location_coords || '');
   fd.append('issue_type', fields.issue_type || '');
 
-  // Defensive duplicates to cover minor backend variations
   fd.append('description', fields.prob_description || '');
   fd.append('coords', fields.location_coords || '');
 
@@ -224,12 +209,9 @@ export async function submitComplaint(fields, imageFile) {
   return requestFormData('/api/complaints', fd, 'POST');
 }
 
-/** Get logged-in citizen's complaints */
 export async function getMyComplaints() {
   return request('/api/complaints/my');
 }
-
-/** Get all public complaints */
 export async function getAllComplaints() {
   return request('/api/complaints');
 }
@@ -285,6 +267,22 @@ export async function resolveComplaint(complaintId, resolveDescription, imageFil
   }
   return requestFormData(`/api/complaints/${encodeURIComponent(complaintId)}/resolve`, fd, 'PATCH');
 }
+
+/**
+ * Citizen confirms or rejects an authority's resolution.
+ * satisfied=true  → complaint becomes 'resolved' (locked)
+ * satisfied=false → complaint becomes 'reopened'
+ *
+ * @param {string|number} complaintId
+ * @param {boolean} satisfied
+ */
+export async function submitComplaintSatisfaction(complaintId, satisfied) {
+  return request(`/api/complaints/${encodeURIComponent(complaintId)}/satisfaction`, {
+    method: 'PATCH',
+    body: JSON.stringify({ satisfied }),
+  });
+}
+
 
 // ─── Facility Request API ────────────────────────────────────────────────────
 

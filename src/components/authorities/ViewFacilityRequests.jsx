@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Leaf, PlusCircle, AlertCircle, Camera, X, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, AlertCircle, Camera, X, CheckCircle2 } from 'lucide-react';
 import {
   getStoredUser,
   getUserRole,
@@ -12,39 +12,30 @@ import {
 } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 
-// ─── Constants ─────────────────────────────────────────────────────────────
 
 const FACILITY_TYPES = [
-  { value: 'street_light',  label: 'Street Light' },
-  { value: 'garbage_bin',   label: 'Garbage Bin' },
-  { value: 'park',          label: 'Public Park' },
-  { value: 'bench',         label: 'Public Bench' },
-  { value: 'playground',    label: 'Playground' },
-  { value: 'water_tap',     label: 'Water Tap / Standpost' },
-  { value: 'road',          label: 'Road / Footpath' },
-  { value: 'toilet',        label: 'Public Toilet' },
-  { value: 'other',         label: 'Other' },
+  { value: 'street_light', label: 'Street Light' },
+  { value: 'garbage_bin', label: 'Garbage Bin' },
+  { value: 'park', label: 'Public Park' },
+  { value: 'bench', label: 'Public Bench' },
+  { value: 'playground', label: 'Playground' },
+  { value: 'water_tap', label: 'Water Tap / Standpost' },
+  { value: 'road', label: 'Road / Footpath' },
+  { value: 'toilet', label: 'Public Toilet' },
+  { value: 'other', label: 'Other' },
 ];
 
 const STATUS_STYLES = {
-  pending:  'bg-amber-50 text-amber-600 border-amber-100',
+  pending: 'bg-amber-50 text-amber-600 border-amber-100',
   approved: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   rejected: 'bg-rose-50 text-rose-600 border-rose-100',
 };
 
 const STATUS_LABELS = {
-  pending:  'Pending',
+  pending: 'Pending',
   approved: 'Approved',
   rejected: 'Rejected',
 };
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-/**
- * Normalize a raw facility request from the backend into a UI shape.
- * Backend fields: request_id, facility_type, request_reason, ward,
- *   image_link, location_coords, status, reject_reason, created_at
- */
 const toUiRequest = (item) => ({
   id: String(item?.request_id || item?.id || item?._id || 'N/A'),
   facilityType: item?.facility_type || 'other',
@@ -62,7 +53,6 @@ const toUiRequest = (item) => ({
   raw: item,
 });
 
-// ─── New Facility Request Modal (citizen) ────────────────────────────────────
 
 const NewRequestModal = ({ user, onClose, onSuccess }) => {
   const navigate = useNavigate();
@@ -136,7 +126,6 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto">
-        {/* Modal Header */}
         <div className="p-8 pb-0 flex justify-between items-start">
           <div>
             <div className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-lg text-xs font-bold mb-2 inline-block">
@@ -161,7 +150,6 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
             </div>
           )}
 
-          {/* Facility Type */}
           <div>
             <label className="block text-sm font-bold text-stone-700 mb-2">Facility Type *</label>
             <select
@@ -177,7 +165,6 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
             </select>
           </div>
 
-          {/* Request Reason */}
           <div>
             <label className="block text-sm font-bold text-stone-700 mb-2">Why is it needed? *</label>
             <textarea
@@ -190,7 +177,6 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
             />
           </div>
 
-          {/* Ward Number */}
           <div>
             <label className="block text-sm font-bold text-stone-700 mb-2">Ward Number *</label>
             <input
@@ -203,7 +189,6 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
             />
           </div>
 
-          {/* Location Coords */}
           <div>
             <label className="block text-sm font-bold text-stone-700 mb-2">
               Location Coordinates
@@ -227,14 +212,13 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
             </div>
           </div>
 
-          {/* Photo Upload — required */}
           <div>
             <label className="block text-sm font-bold text-stone-700 mb-2">
               Photo <span className="text-red-500">*</span>
               <span className="text-xs font-normal text-stone-400 ml-2">(required)</span>
             </label>
             {!photoPreview ? (
-              <div className="border-2 border-dashed border-stone-200 rounded-2xl p-5 text-center hover:border-emerald-400 transition-colors">
+              <div className="border-2 border-dashed border-stone-200 rounded-2xl p-5 text-center hover:border-indigo-400 transition-colors">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -245,8 +229,8 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
                   id="facility-photo"
                 />
                 <label htmlFor="facility-photo" className="cursor-pointer flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <Camera className="w-5 h-5 text-emerald-600" />
+                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <Camera className="w-5 h-5 text-indigo-600" />
                   </div>
                   <p className="text-stone-600 font-medium text-sm">Take or upload photo</p>
                   <p className="text-stone-400 text-xs">Shows the location / need</p>
@@ -267,19 +251,18 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3 justify-end pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-2xl transition-all text-sm"
+              className="px-6 py-3 font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-2xl transition-all text-sm cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-3 font-black bg-emerald-500 text-white hover:bg-emerald-600 rounded-2xl transition-all shadow-lg shadow-emerald-200 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0 text-sm flex items-center gap-2"
+              className="px-6 py-3 font-black bg-[#d5b153] text-white hover:bg-[#d59e3c] rounded-2xl transition-all shadow-lg shadow-[#d5b153] hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0 text-sm flex items-center gap-2 cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -288,7 +271,7 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
                 </>
               ) : (
                 <>
-                  <PlusCircle className="w-4 h-4" /> Submit Request
+                  Submit Request
                 </>
               )}
             </button>
@@ -299,7 +282,6 @@ const NewRequestModal = ({ user, onClose, onSuccess }) => {
   );
 };
 
-// ─── Authority Review Modal ──────────────────────────────────────────────────
 
 const ReviewModal = ({ request, onClose, onUpdate }) => {
   const navigate = useNavigate();
@@ -379,7 +361,7 @@ const ReviewModal = ({ request, onClose, onUpdate }) => {
               rows="3"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              className="w-full px-5 py-4 border-2 border-stone-100 bg-stone-50 rounded-2xl focus:bg-white focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300 focus:outline-none transition-all placeholder:text-stone-300 font-medium"
+              className="w-full px-5 py-4 border-2 border-stone-100 bg-stone-50 rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-100 focus:border-emerald-300 focus:outline-none transition-all placeholder:text-stone-300 font-medium"
               placeholder="e.g. Budget approved for Q3..."
             />
           </div>
@@ -389,15 +371,15 @@ const ReviewModal = ({ request, onClose, onUpdate }) => {
               type="button"
               disabled={saving}
               onClick={() => handleAction('rejected')}
-              className="w-full sm:w-auto px-6 py-3 font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-3 font-bold bg-gray-100 hover:bg-gray-200 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              <X className="w-5 h-5" /> Reject
+              Reject
             </button>
             <button
               type="button"
               disabled={saving}
               onClick={() => handleAction('approved')}
-              className="w-full sm:w-auto px-6 py-3 font-black bg-emerald-500 text-white hover:bg-emerald-600 rounded-2xl transition-all shadow-lg shadow-emerald-200 hover:-translate-y-1 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full sm:w-auto px-6 font-black bg-[#c5a85a] text-white hover:bg-[#c4a85ad8] rounded-2xl transition-all shadow-lg shadow-[#c5a85a] hover:-translate-y-1 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {saving ? (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -413,12 +395,11 @@ const ReviewModal = ({ request, onClose, onUpdate }) => {
   );
 };
 
-// ─── Main Component ──────────────────────────────────────────────────────────
-
 const ViewFacilityRequests = () => {
   const navigate = useNavigate();
   const user = getStoredUser();
   const isAuthority = getUserRole(user) === 'authority';
+  const wardNo = user?.ward_no || user?.user_metadata?.ward_no;
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -432,15 +413,14 @@ const ViewFacilityRequests = () => {
       setLoading(true);
       setError('');
       const data = isAuthority
-        ? await getWardFacilityRequests(user?.ward_no || user?.user_metadata?.ward_no)
+        ? await getWardFacilityRequests(wardNo)
         : await getMyFacilityRequests();
 
-      // Backend returns { success: true, requests: [...] }
       const list = Array.isArray(data)
         ? data
         : Array.isArray(data?.requests)
-        ? data.requests
-        : [];
+          ? data.requests
+          : [];
 
       setRequests(list.map(toUiRequest));
     } catch (err) {
@@ -448,13 +428,12 @@ const ViewFacilityRequests = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAuthority, user, navigate]);
+  }, [isAuthority, wardNo, navigate]);
 
   useEffect(() => {
     loadRequests();
   }, [loadRequests]);
 
-  /** Called after authority approves/rejects — update local state */
   const handleUpdate = useCallback((id, newStatus, rejectReason) => {
     setRequests((prev) =>
       prev.map((r) =>
@@ -465,7 +444,6 @@ const ViewFacilityRequests = () => {
     );
   }, []);
 
-  /** Called after citizen submits a new request */
   const handleNewSuccess = useCallback(() => {
     setShowNewModal(false);
     setSuccessMessage('Facility request submitted! It will appear below shortly.');
@@ -474,15 +452,11 @@ const ViewFacilityRequests = () => {
   }, [loadRequests]);
 
   return (
-    <div className="animate-fade-in-right">
-      {/* Header */}
+    <div className="animate-fade-in-right lg:px-32 px-4 lg:py-12 py-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600">
-            <Leaf className="w-6 h-6" />
-          </div>
           <div>
-            <h2 className="text-3xl font-black text-stone-800 tracking-tight">Grow the City</h2>
+            <h2 className="text-3xl font-black text-stone-800 tracking-tight">Facility Requests</h2>
             <p className="text-stone-500 font-medium text-sm mt-1">
               {isAuthority
                 ? 'Review community dreams and help bring them to life.'
@@ -491,18 +465,16 @@ const ViewFacilityRequests = () => {
           </div>
         </div>
 
-        {/* Citizen: New Request CTA */}
         {!isAuthority && (
           <button
             onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-emerald-500 text-white font-bold text-sm rounded-2xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 hover:-translate-y-0.5 whitespace-nowrap"
+            className="flex items-center gap-2 px-5 py-3 bg-[#d5b153] text-white font-bold text-sm rounded-2xl hover:bg-[#d59e3c] transition-all shadow-lg shadow-[#d5b153] hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
           >
             <PlusCircle className="w-5 h-5" /> New Request
           </button>
         )}
       </div>
 
-      {/* Success banner */}
       {successMessage && (
         <div className="mb-6 flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-sm text-emerald-700 font-semibold">
           <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
@@ -510,7 +482,6 @@ const ViewFacilityRequests = () => {
         </div>
       )}
 
-      {/* Error banner */}
       {error && !loading && (
         <div className="mb-6 flex items-center gap-2 rounded-2xl bg-red-50 border border-red-200 px-5 py-4 text-sm text-red-700 font-semibold">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -518,7 +489,6 @@ const ViewFacilityRequests = () => {
         </div>
       )}
 
-      {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-16 text-stone-500 font-medium text-sm gap-2">
           <span className="w-5 h-5 border-2 border-stone-300 border-t-emerald-500 rounded-full animate-spin"></span>
@@ -526,7 +496,6 @@ const ViewFacilityRequests = () => {
         </div>
       )}
 
-      {/* Table */}
       {!loading && !error && (
         <div className="bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-stone-100 overflow-hidden">
           <div className="overflow-x-auto w-full">
@@ -554,9 +523,8 @@ const ViewFacilityRequests = () => {
                     <td className="p-5 text-sm text-stone-500">{r.date}</td>
                     <td className="p-5">
                       <span
-                        className={`px-4 py-1.5 text-xs font-bold rounded-full border ${
-                          STATUS_STYLES[r.status] || STATUS_STYLES.pending
-                        }`}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-full border ${STATUS_STYLES[r.status] || STATUS_STYLES.pending
+                          }`}
                       >
                         {r.statusLabel}
                       </span>
@@ -584,21 +552,12 @@ const ViewFacilityRequests = () => {
             {requests.length === 0 && (
               <div className="p-12 text-center">
                 <p className="text-stone-500 font-bold">No facility requests found.</p>
-                {!isAuthority && (
-                  <button
-                    onClick={() => setShowNewModal(true)}
-                    className="mt-4 flex items-center gap-2 mx-auto px-5 py-3 bg-emerald-500 text-white font-bold text-sm rounded-2xl hover:bg-emerald-600 transition-all"
-                  >
-                    <PlusCircle className="w-4 h-4" /> Submit your first request
-                  </button>
-                )}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Authority Review Modal */}
       {isAuthority && selectedRequest && (
         <ReviewModal
           request={selectedRequest}

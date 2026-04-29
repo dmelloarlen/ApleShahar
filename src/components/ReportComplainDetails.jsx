@@ -3,10 +3,9 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Camera, Navigation, X, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { getStoredUser, getUserWard, handleApiError, submitComplaint } from '../lib/api';
+import { getStoredUser, handleApiError, submitComplaint } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 
-// Fix for default leaflet marker icon
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -14,21 +13,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// ─── Constants — Vasai-Virar Municipal Corporation ───────────────────────────
-// 29 wards derived from the backend's all_wards.json (org_no 24).
-// Center coordinates computed as bounding-box midpoints of each ward polygon.
-const DEFAULT_CENTER = [19.428, 72.827]; // geographic center of Vasai-Virar
+const DEFAULT_CENTER = [19.428, 72.827];
 
 const WARDS = [
-  { id: 1,  name: 'Ward 1',  coordinates: [19.48618, 72.86282] },
-  { id: 2,  name: 'Ward 2',  coordinates: [19.47177, 72.78948] },
-  { id: 3,  name: 'Ward 3',  coordinates: [19.46545, 72.81495] },
-  { id: 4,  name: 'Ward 4',  coordinates: [19.45840, 72.81818] },
-  { id: 5,  name: 'Ward 5',  coordinates: [19.44826, 72.80621] },
-  { id: 6,  name: 'Ward 6',  coordinates: [19.44271, 72.82833] },
-  { id: 7,  name: 'Ward 7',  coordinates: [19.45035, 72.82782] },
-  { id: 8,  name: 'Ward 8',  coordinates: [19.43832, 72.84538] },
-  { id: 9,  name: 'Ward 9',  coordinates: [19.42864, 72.82376] },
+  { id: 1, name: 'Ward 1', coordinates: [19.48618, 72.86282] },
+  { id: 2, name: 'Ward 2', coordinates: [19.47177, 72.78948] },
+  { id: 3, name: 'Ward 3', coordinates: [19.46545, 72.81495] },
+  { id: 4, name: 'Ward 4', coordinates: [19.45840, 72.81818] },
+  { id: 5, name: 'Ward 5', coordinates: [19.44826, 72.80621] },
+  { id: 6, name: 'Ward 6', coordinates: [19.44271, 72.82833] },
+  { id: 7, name: 'Ward 7', coordinates: [19.45035, 72.82782] },
+  { id: 8, name: 'Ward 8', coordinates: [19.43832, 72.84538] },
+  { id: 9, name: 'Ward 9', coordinates: [19.42864, 72.82376] },
   { id: 10, name: 'Ward 10', coordinates: [19.43966, 72.81776] },
   { id: 11, name: 'Ward 11', coordinates: [19.43138, 72.80492] },
   { id: 12, name: 'Ward 12', coordinates: [19.45001, 72.77567] },
@@ -52,18 +48,16 @@ const WARDS = [
 ];
 
 const ISSUE_TYPES = [
-  { value: 'pothole',      label: 'Pothole / Road Damage' },
-  { value: 'streetlight',  label: 'Streetlight Not Working' },
-  { value: 'garbage',      label: 'Garbage / Waste Issue' },
-  { value: 'water',        label: 'Water Supply / Leak' },
-  { value: 'drainage',     label: 'Drainage / Sewage' },
-  { value: 'tree',         label: 'Fallen Tree / Branch' },
+  { value: 'pothole', label: 'Pothole / Road Damage' },
+  { value: 'streetlight', label: 'Streetlight Not Working' },
+  { value: 'garbage', label: 'Garbage / Waste Issue' },
+  { value: 'water', label: 'Water Supply / Leak' },
+  { value: 'drainage', label: 'Drainage / Sewage' },
+  { value: 'tree', label: 'Fallen Tree / Branch' },
   { value: 'encroachment', label: 'Encroachment' },
-  { value: 'noise',        label: 'Noise Complaint' },
-  { value: 'other',        label: 'Other' },
+  { value: 'noise', label: 'Noise Complaint' },
+  { value: 'other', label: 'Other' },
 ];
-
-// ─── Map helpers ─────────────────────────────────────────────────────────────
 
 const LocationMarker = ({ position, setPosition }) => {
   const map = useMapEvents({
@@ -83,10 +77,6 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
-/**
- * Rough point-in-ward detection for Vasai-Virar.
- * Returns the ward id (integer) whose center is closest to the given coords.
- */
 const getNearestWard = (lat, lng) => {
   let best = WARDS[0];
   let bestDist = Infinity;
@@ -99,38 +89,32 @@ const getNearestWard = (lat, lng) => {
   return best.id;
 };
 
-// ─── Component ───────────────────────────────────────────────────────────────
-
 const ReportComplainDetails = () => {
   const user = getStoredUser();
   const navigate = useNavigate();
 
-  // Separate file object (for upload) from preview URL
-  const [photoFile, setPhotoFile]       = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
 
   const [formData, setFormData] = useState({
     prob_description: '',
     issue_type: '',
-    selectedWard: '',   // stored as integer (ward id)
+    selectedWard: '',
     position: null,
     mapCenter: DEFAULT_CENTER,
     isAutoDetecting: false,
   });
-  const [error, setError]         = useState('');
-  const [success, setSuccess]     = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fileInputRef = useRef(null);
-
-  // ── Event handlers ──
 
   const handleInputChange = useCallback((field) => (e) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
   }, []);
 
   const handleWardChange = useCallback((e) => {
-    // DOM always gives a string; parse to int to match numeric WARDS ids
     const wardId = parseInt(e.target.value, 10);
     if (isNaN(wardId)) {
       setFormData(prev => ({ ...prev, selectedWard: '' }));
@@ -170,8 +154,8 @@ const ReportComplainDetails = () => {
     };
 
     const onError = () => {
-      // Default to geographic center ward
       applyWard(WARDS[0].id, null, null);
+      setError('Unable to auto-detect location. location out of radious.');
     };
 
     if (navigator.geolocation) {
@@ -198,10 +182,10 @@ const ReportComplainDetails = () => {
 
   const validateForm = () => {
     if (!formData.prob_description.trim()) return 'Please describe the problem in detail.';
-    if (!formData.issue_type)              return 'Please select an issue type.';
-    if (!formData.selectedWard)            return 'Please select or auto-detect your ward.';
-    if (!formData.position)                return 'Please pin the location on the map.';
-    if (!photoFile)                        return 'Please attach a photo of the issue (required).';
+    if (!formData.issue_type) return 'Please select an issue type.';
+    if (!formData.selectedWard) return 'Please select or auto-detect your ward.';
+    if (!formData.position) return 'Please pin the location on the map.';
+    if (!photoFile) return 'Please attach a photo of the issue (required).';
     return null;
   };
 
@@ -229,7 +213,6 @@ const ReportComplainDetails = () => {
 
     const coordsString = `${formData.position.lat.toFixed(6)},${formData.position.lng.toFixed(6)}`;
 
-    // Backend service does parseInt(wardNo) — send as string of a plain number
     const fields = {
       prob_description: formData.prob_description.trim(),
       ward: String(formData.selectedWard),
@@ -242,6 +225,7 @@ const ReportComplainDetails = () => {
       await submitComplaint(fields, photoFile);
       setSuccess('Your complaint has been submitted successfully!');
       resetForm();
+      navigate('/');
     } catch (err) {
       setError(handleApiError(err, navigate));
     } finally {
@@ -249,12 +233,9 @@ const ReportComplainDetails = () => {
     }
   };
 
-  // ── Render ──
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-2xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Report a Problem</h1>
           <p className="text-slate-600 text-sm md:text-base">
@@ -279,7 +260,6 @@ const ReportComplainDetails = () => {
               </div>
             )}
 
-            {/* Issue Type */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Issue Type *</label>
               <select
@@ -295,7 +275,6 @@ const ReportComplainDetails = () => {
               </select>
             </div>
 
-            {/* Problem Description */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Problem Description *</label>
               <textarea
@@ -308,7 +287,6 @@ const ReportComplainDetails = () => {
               />
             </div>
 
-            {/* Ward — 29 Vasai-Virar wards */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-3">Ward Number *</label>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -328,7 +306,7 @@ const ReportComplainDetails = () => {
                   type="button"
                   onClick={autoDetectWard}
                   disabled={formData.isAutoDetecting}
-                  className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-200 transition-all font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 focus:ring-4 focus:ring-indigo-200 transition-all font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
                 >
                   {formData.isAutoDetecting ? (
                     <>
@@ -350,14 +328,13 @@ const ReportComplainDetails = () => {
               )}
             </div>
 
-            {/* Photo — required by backend */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 Attach Photo <span className="text-red-500">*</span>
               </label>
               <div className="space-y-3">
                 {!photoPreview ? (
-                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-emerald-400 transition-colors">
+                  <div className="border-2 border-dashed border-indigo-300 rounded-xl p-6 text-center hover:border-indigo-400 transition-colors">
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -368,8 +345,8 @@ const ReportComplainDetails = () => {
                       id="photo-upload"
                     />
                     <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                        <Camera className="w-6 h-6 text-emerald-600" />
+                      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <Camera className="w-6 h-6 text-indigo-600" />
                       </div>
                       <div>
                         <p className="text-slate-700 font-medium">Take or upload photo</p>
@@ -395,7 +372,6 @@ const ReportComplainDetails = () => {
               </div>
             </div>
 
-            {/* Map — centered on Vasai-Virar */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-rose-500" />
@@ -422,11 +398,10 @@ const ReportComplainDetails = () => {
               )}
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-emerald-600 text-white font-semibold text-lg py-4 rounded-xl hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-200 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
+              className="w-full bg-[#d5b153] text-white font-semibold text-lg py-2 rounded-xl hover:bg-[#c5a85a] focus:ring-4 focus:ring-emerald-200 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0 cursor-pointer"
             >
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
